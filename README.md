@@ -1,3 +1,6 @@
+# This version is a AWS services version of Logo Quiz. Enjoy and have fun!
+This is forked from Logo-quip github. Thanks
+
 # LogoQuiz
 
 Can you guess any of [these logos](https://logoquiz.dev/)?

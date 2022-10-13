@@ -10,6 +10,7 @@ services:
     volumes:
       - ./init-mongo.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
       - ./mongo:/data/db
+      - ./icon_path_64.txt:/icon_path_64.txt:ro
     environment:
       MONGO_INITDB_DATABASE: logo-quiz
       MONGO_INITDB_ROOT_USERNAME: root

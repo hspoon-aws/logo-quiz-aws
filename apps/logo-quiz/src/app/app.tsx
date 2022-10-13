@@ -10,16 +10,19 @@ export class App extends Component {
       <div className="vh-center main">
         <div className="vh-center flex-column main__content">
           <h1 className="main__header">Logo Quiz</h1>
-          <h2 className="main__subheader">Software Edition</h2>
+          <h2 className="main__subheader">AWS Edition</h2>
           <img
             className="main__image"
-            src="https://res.cloudinary.com/dvug9mnfm/image/upload/v1593182475/cover_xniolj.png"
+            src="https://d0.awsstatic.com/logos/powered-by-aws-white.png"
             alt="logos"
           />
           <Link className="main__button vh-center" to="/levels">
             Play
           </Link>
+          
+          <div className="main__footer">This project is forked from <br/> <a href="https://github.com/logo-quiz/logo-quiz">Logo-quiz Github</a></div>
         </div>
+        
       </div>
     );
   }

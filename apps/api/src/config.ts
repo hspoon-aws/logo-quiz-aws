@@ -24,7 +24,7 @@ interface Config {
 export const config: Partial<Config> = {
   environment: <EnvironmentName>process.env.NODE_ENV || 'development',
   salt: process.env.APP_SALT || 'mysalt',
-  dbUri: process.env.MONGODB_URI || 'mongodb://root:example@localhost:27017/logo-quiz',
+  dbUri: process.env.MONGODB_URI || 'mongodb://root:example@mongodb:27017/logo-quiz',
   session: {
     secret: process.env.APP_SESSION_SECRET || 'mysecret',
   },

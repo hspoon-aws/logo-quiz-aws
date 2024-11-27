@@ -1,6 +1,52 @@
-version: '3'
+version: '3.8'
+
 services:
-  web:
-    build: .
+  mongodb:
+    image: mongo
+    restart: always
+    ports:
+      - 27017:27017
+    volumes:
+      - ./docker/api/init-mongo.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+      - ./docker/api/mongo:/data/db
+      - ./docker/api/icon_path_64.txt:/icon_path_64.txt:ro
+    environment:
+      MONGO_INITDB_DATABASE: logo-quiz
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    networks:
+      - app-network
+
+  api:
+    build:
+      context: .
+      dockerfile: api.Dockerfile
     ports:
       - "3333:3333"
+    environment:
+      - MONGODB_URI=mongodb://root:example@mongodb:27017/logo-quiz # Internal connection uses default MongoDB port
+    depends_on:
+      - mongodb
+    networks:
+      - app-network
+    restart: on-failure
+
+  web:
+    build:
+      context: .
+      dockerfile: web.Dockerfile
+    ports:
+      - "4200:4200"
+    depends_on:
+      - api
+    networks:
+      - app-network
+    restart: on-failure
+
+
+# volumes:
+#   mongodb_data:
+
+networks:
+  app-network:
+    driver: bridge

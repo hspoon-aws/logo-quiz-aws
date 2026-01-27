@@ -291,21 +291,20 @@ export class GameRoomService {
   }
 
   async findRoomBySocketId(socketId: string): Promise<GameRoom | null> {
-    // Scan for rooms where user is host or a player
+    // Scan for all active rooms - DynamoDB's contains() doesn't work for nested object properties
+    // We filter client-side to find rooms where user is host or a player
     const rooms = await this.dynamodb.scan<GameRoom>({
       TableName: TABLES.GAME_ROOMS,
-      FilterExpression:
-        '#status IN (:waiting, :starting, :in_progress) AND (hostSocketId = :socketId OR contains(players, :socketId))',
+      FilterExpression: '#status IN (:waiting, :starting, :in_progress)',
       ExpressionAttributeNames: { '#status': 'status' },
       ExpressionAttributeValues: {
         ':waiting': 'waiting',
         ':starting': 'starting',
         ':in_progress': 'in_progress',
-        ':socketId': socketId,
       },
     });
 
-    // Filter more precisely since contains doesn't work well with nested objects
+    // Find room where user is host or a player by checking socketId
     return (
       rooms.find((room) => room.hostSocketId === socketId || room.players.some((p) => p.socketId === socketId)) ||
       null

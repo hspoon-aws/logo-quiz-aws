@@ -178,22 +178,23 @@ async function createTables(): Promise<void> {
 }
 
 function processIconPath(iconPath: string, levelId: string) {
-  const sessions = iconPath.split('/');
-  const filename = sessions[4];
+  // Path format: assets/Architecture-Service-Icons/Arch_Category/64/Arch_Service-Name_64.png
+  const filename = path.basename(iconPath);
   if (!filename) return null;
 
-  // Extract service name from filename
-  let serviceName = filename.split('_')[1];
-  if (!serviceName) return null;
+  // Extract service name from filename (e.g., "Arch_AWS-Lambda_64.png" -> "Lambda")
+  // Pattern: Arch_{AWS-|Amazon-}ServiceName_64.png
+  const match = filename.match(/^Arch_(?:AWS-|Amazon-)?(.+?)_\d+\.png$/);
+  if (!match) return null;
 
-  serviceName = serviceName
-    .replace('AWS-', '')
-    .replace('Amazon-', '')
-    .replace('.png', '')
-    .replace(/-/g, ' ');
+  let serviceName = match[1];
 
-  // Generate scrambled letters
-  const letters = serviceName
+  // Convert hyphens to spaces for multi-word service names
+  serviceName = serviceName.replace(/-/g, ' ');
+
+  // Generate scrambled letters (excluding spaces)
+  const lettersOnly = serviceName.replace(/ /g, '').toLowerCase();
+  const letters = lettersOnly
     .split('')
     .sort(() => 0.5 - Math.random())
     .join('');
@@ -206,28 +207,92 @@ function processIconPath(iconPath: string, levelId: string) {
     obfuscatedImageUrl: iconPath,
     realImageUrl: iconPath,
     name: serviceName.toLowerCase(),
-    letters: letters.replace(/ /g, '').toLowerCase(),
+    letters: letters,
     createdAt: now,
     updatedAt: now,
   };
 }
 
+function scanIconsDirectory(): string[] {
+  const iconsDir = path.join(__dirname, '../apps/logo-quiz/public/assets/Architecture-Service-Icons');
+
+  if (!fs.existsSync(iconsDir)) {
+    console.error('Icons directory not found:', iconsDir);
+    console.log('Run "npm run update:icons" to download the AWS icons first.');
+    return [];
+  }
+
+  const iconPaths: string[] = [];
+
+  // Scan each category directory (Arch_*)
+  const categories = fs.readdirSync(iconsDir).filter(f =>
+    f.startsWith('Arch_') && fs.statSync(path.join(iconsDir, f)).isDirectory()
+  );
+
+  for (const category of categories) {
+    const categoryPath = path.join(iconsDir, category);
+
+    // Look for 64x64 icons directory
+    const size64Dir = path.join(categoryPath, '64');
+    if (fs.existsSync(size64Dir)) {
+      const icons = fs.readdirSync(size64Dir).filter(f => f.endsWith('.png'));
+      for (const icon of icons) {
+        // Create relative path for web serving
+        iconPaths.push(`assets/Architecture-Service-Icons/${category}/64/${icon}`);
+      }
+    }
+  }
+
+  return iconPaths.sort((a, b) => {
+    // Sort by filename length (shorter names = simpler services = easier level)
+    const nameA = path.basename(a);
+    const nameB = path.basename(b);
+    return nameA.length - nameB.length;
+  });
+}
+
+async function clearTable(tableName: string, keyName: string): Promise<void> {
+  const { ScanCommand, DeleteCommand } = await import('@aws-sdk/lib-dynamodb');
+
+  // Scan all items
+  const items: any[] = [];
+  let lastKey: any;
+
+  do {
+    const result = await docClient.send(new ScanCommand({
+      TableName: tableName,
+      ExclusiveStartKey: lastKey,
+      ProjectionExpression: keyName,
+    }));
+    items.push(...(result.Items || []));
+    lastKey = result.LastEvaluatedKey;
+  } while (lastKey);
+
+  // Delete all items
+  for (const item of items) {
+    await docClient.send(new DeleteCommand({
+      TableName: tableName,
+      Key: { [keyName]: item[keyName] },
+    }));
+  }
+}
+
 async function seedLevelsAndLogos(): Promise<void> {
   console.log('Seeding levels and logos...\n');
 
-  // Read icon paths
-  const iconPathFile = path.join(__dirname, '../docker/api/icon_path_64.txt');
-  if (!fs.existsSync(iconPathFile)) {
-    console.error('Icon path file not found:', iconPathFile);
-    console.log('Skipping logo seeding...');
+  // Clear existing levels and logos first
+  console.log('Clearing existing levels and logos...');
+  await clearTable(TABLES.LEVELS, 'levelId');
+  await clearTable(TABLES.LOGOS, 'logoId');
+  console.log('✓ Cleared existing data\n');
+
+  // Scan icons directory for available icons
+  const iconPaths = scanIconsDirectory();
+
+  if (iconPaths.length === 0) {
+    console.log('No icons found. Skipping logo seeding...');
     return;
   }
-
-  const iconPaths = fs
-    .readFileSync(iconPathFile, 'utf8')
-    .split('\n')
-    .filter((p) => p.trim())
-    .sort((a, b) => a.length - b.length);
 
   console.log(`Found ${iconPaths.length} icon paths`);
 

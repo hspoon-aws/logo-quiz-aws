@@ -14,6 +14,8 @@ npm run start:dynamodb         # Start DynamoDB local via finch (port 8000)
 npm run start:api              # Start backend dev server (port 3333) using tsx watch
 npm run start:frontend         # Start frontend dev server (port 4200) using Vite
 npm run seed:dynamodb          # Seed DynamoDB with initial levels and logos data
+npm run update:icons           # Download latest AWS icons (skips if current)
+npm run update:icons:force     # Force re-download AWS icons
 ```
 
 ### Build
@@ -110,6 +112,27 @@ Frontend environments in `apps/logo-quiz/src/environments/`
 | `LogoQuiz-UserState` | `odUserId` (S) | - | - |
 | `LogoQuiz-GameRooms` | `roomCode` (S) | - | - |
 | `LogoQuiz-GameSessions` | `gameRoomId` (S) | `odSocketId` (S) | - |
+
+## AWS Icons
+
+The logo images are sourced from the official [AWS Architecture Icons](https://aws.amazon.com/architecture/icons/) package.
+
+### Updating Icons
+```bash
+npm run update:icons           # Check and download latest version
+npm run update:icons:force     # Force re-download even if current
+npm run refresh:icons          # Update icons AND reseed database
+```
+
+The script:
+1. Fetches the AWS icons page to find the latest Asset Package URL
+2. Compares versions (stored in `.version` file)
+3. Downloads and extracts `Architecture-Service-Icons` folder
+4. Icons are stored in `apps/logo-quiz/public/assets/Architecture-Service-Icons/`
+
+### Scripts
+- `scripts/update-aws-icons.ts` - Node.js script for programmatic use
+- `scripts/update-aws-icons.sh` - Bash script for CI/CD pipelines
 
 ## Test Credentials
 

@@ -3,8 +3,8 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
-    "start:db": "finch compose up dynamodb-local -d",
-    "stop:db": "finch compose down",
+    "start:dynamodb": "finch run -d -p 8000:8000 --name dynamodb-local amazon/dynamodb-local 2>/dev/null || finch start dynamodb-local",
+    "stop:dynamodb": "finch stop dynamodb-local",
     "start:api": "tsx watch apps/api/src/main.ts",
     "start:frontend": "vite --config apps/logo-quiz/vite.config.ts",
     "build:api": "tsc -p apps/api/tsconfig.app.json && tsc-alias -p apps/api/tsconfig.app.json",
@@ -12,7 +12,10 @@
     "build": "npm run build:api && npm run build:frontend",
     "start:api:prod": "node dist/apps/api/main.js",
     "seed": "tsx scripts/seed-dynamodb.ts",
-    "seed:local": "DYNAMODB_ENDPOINT=http://localhost:8000 tsx scripts/seed-dynamodb.ts",
+    "seed:dynamodb": "DYNAMODB_ENDPOINT=http://localhost:8000 tsx scripts/seed-dynamodb.ts",
+    "update:icons": "tsx scripts/update-aws-icons.ts",
+    "update:icons:force": "tsx scripts/update-aws-icons.ts --force",
+    "refresh:icons": "npm run update:icons && npm run seed:dynamodb",
     "test": "jest",
     "lint": "eslint apps libs --ext .ts,.tsx",
     "format": "prettier --write \"apps/**/*.{ts,tsx}\" \"libs/**/*.{ts,tsx}\""

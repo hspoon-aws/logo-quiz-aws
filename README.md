@@ -190,17 +190,32 @@ npm run start:dynamodb
 npm run seed:dynamodb
 ```
 
-3. Run backend
+3. Update AWS icons (optional - downloads latest from AWS)
+```bash
+npm run update:icons
+```
+
+4. Run backend
 ```bash
 npm run start:api
 ```
 The backend will run on port 3333
 
-4. Run frontend
+5. Run frontend
 ```bash
 npm run start:frontend
 ```
 The frontend will run on port 4200
+
+### AWS Icons
+
+The logo images are sourced from the official [AWS Architecture Icons](https://aws.amazon.com/architecture/icons/) package. To update to the latest icons:
+
+```bash
+npm run update:icons           # Check and download if newer version available
+npm run update:icons:force     # Force re-download
+npm run refresh:icons          # Update icons AND reseed the database
+```
 
 ## Resources
 

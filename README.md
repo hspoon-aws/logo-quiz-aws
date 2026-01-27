@@ -183,6 +183,7 @@ You'll need Docker or Finch to run the local DynamoDB instance. Then run the fol
 ```bash
 npm run start:dynamodb
 # Or manually: finch run -d -p 8000:8000 --name dynamodb-local amazon/dynamodb-local
+# To stop: npm run stop:dynamodb
 ```
 
 2. Seed the database (first time only)

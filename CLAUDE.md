@@ -11,11 +11,13 @@ Logo Quiz AWS is a full-stack web application for guessing company logos. Built 
 ### Development
 ```bash
 npm run start:dynamodb         # Start DynamoDB local via finch (port 8000)
+npm run stop:dynamodb          # Stop DynamoDB local container
 npm run start:api              # Start backend dev server (port 3333) using tsx watch
 npm run start:frontend         # Start frontend dev server (port 4200) using Vite
 npm run seed:dynamodb          # Seed DynamoDB with initial levels and logos data
 npm run update:icons           # Download latest AWS icons (skips if current)
 npm run update:icons:force     # Force re-download AWS icons
+npm run refresh:icons          # Update icons AND reseed database
 ```
 
 ### Build
@@ -106,12 +108,12 @@ Frontend environments in `apps/logo-quiz/src/environments/`
 
 | Table | Partition Key | Sort Key | GSI |
 |-------|--------------|----------|-----|
-| `LogoQuiz-Users` | `email` (S) | - | - |
+| `LogoQuiz-Users` | `userId` (S) | - | `email-index` |
 | `LogoQuiz-Levels` | `levelId` (S) | - | - |
 | `LogoQuiz-Logos` | `logoId` (S) | - | `levelId-index` |
-| `LogoQuiz-UserState` | `odUserId` (S) | - | - |
+| `LogoQuiz-UserState` | `stateId` (S) | - | `userId-index` |
 | `LogoQuiz-GameRooms` | `roomCode` (S) | - | - |
-| `LogoQuiz-GameSessions` | `gameRoomId` (S) | `odSocketId` (S) | - |
+| `LogoQuiz-GameSessions` | `roomCode` (S) | `socketId` (S) | - |
 
 ## AWS Icons
 

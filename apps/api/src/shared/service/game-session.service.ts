@@ -82,7 +82,7 @@ export class GameSessionService {
     }
 
     // Calculate points: positive for correct, negative penalty for wrong
-    const wrongAnswerPenalty = 25;
+    const wrongAnswerPenalty = 100;
     const points = correct ? this.calculatePoints(timeTaken, totalGameTime) : -wrongAnswerPenalty;
 
     const answer: GameAnswer = {

@@ -70,7 +70,7 @@ docker compose up web          # Frontend service
   - Live leaderboard during gameplay
   - Score animation (+/- points) on answers
   - Answer reveal to all players when someone solves
-  - Wrong answer penalty (-25 points)
+  - Wrong answer penalty (-100 points)
   - Space-insensitive answer validation
   - Final scoreboard with rankings
 

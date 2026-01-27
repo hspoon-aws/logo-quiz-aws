@@ -164,7 +164,7 @@ logo-quiz-aws/
 | Action | Points |
 |--------|--------|
 | Correct answer | +100 to +10 (based on time) |
-| Wrong answer | -25 |
+| Wrong answer | -100 |
 | Minimum score | 0 |
 
 Score calculation: `points = max(10, 100 - (timeTaken / totalTime) * 90)`

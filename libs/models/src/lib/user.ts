@@ -1,21 +1,22 @@
-import { Document } from 'mongoose';
 import { CreateUserDto } from './create-user.dto';
 import { Timestampable } from './timestampable';
 
-export interface User extends CreateUserDto, Document, Timestampable {
-  _id: string;
-  state: UserState;
-  lastAccessAt: Date;
+export interface User extends CreateUserDto, Timestampable {
+  userId: string;
+  email: string;
+  password: string;
+  stateId?: string;
+  lastAccessAt?: Date;
 }
 
-export interface UserState extends Document {
-  _id: string;
-  user: string;
-  logos: string[];
+export interface UserState extends Timestampable {
+  stateId: string;
+  userId: string;
+  logos: string[]; // Array of logoIds
 }
 
-export interface UserCompletedLogo extends Document {
-  _id: string;
-  state: string;
-  logo: string;
+export interface UserCompletedLogo extends Timestampable {
+  id: string;
+  stateId: string;
+  logoId: string;
 }

@@ -49,7 +49,7 @@ export function fetchLevels() {
           ...level,
           logos: level.logos.map(logo => ({
             ...logo,
-            validated: completedLogos.includes(logo._id)
+            validated: completedLogos.includes(logo.logoId)
           }))
         }));
         dispatch(requestLevelsSuccess(levelsWithValidation));

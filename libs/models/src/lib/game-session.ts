@@ -1,20 +1,18 @@
-import { Document } from 'mongoose';
 import { Timestampable } from './timestampable';
 
 export interface GameAnswer {
-  logo: string;
+  logoId: string;
   correct: boolean;
   timeTaken: number; // milliseconds
   points: number;
-  answeredAt: Date;
+  answeredAt: string; // ISO date string
 }
 
-export interface GameSession extends Document, Timestampable {
-  _id: string;
-  gameRoom: string;
-  user?: string;
+export interface GameSession extends Timestampable {
+  roomCode: string; // Partition key (links to GameRoom)
+  socketId: string; // Sort key
+  userId?: string;
   displayName: string;
-  socketId: string;
   score: number;
   answers: GameAnswer[];
   correctAnswers: number;

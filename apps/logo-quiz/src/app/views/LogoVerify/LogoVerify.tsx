@@ -252,7 +252,7 @@ class LogoVerify extends React.Component<LogoVerifyProps, LogoVerifyState> {
           {this.props.nextLogo && (
             <Link
               className="main__button lv-modal__button lv-modal__button--next"
-              to={this.props.nextLogo._id}
+              to={this.props.nextLogo.logoId}
             >
               <span className="lv-modal__back-text">Next logo</span>
               <SVGBackArrow className="lv-modal__front-icon" height="16px"/>
@@ -261,7 +261,7 @@ class LogoVerify extends React.Component<LogoVerifyProps, LogoVerifyState> {
           <hr/>
           <Link
             className="lv-modal__button lv-modal__button--prev"
-            to={`/levels/${this.props.logo.level}`}
+            to={`/levels/${this.props.logo.levelId}`}
           >
             <SVGBackArrow className="lv-modal__back-icon" height="16px"/>
             <span className="lv-modal__back-text">Back to logos</span>
@@ -305,7 +305,7 @@ class LogoVerify extends React.Component<LogoVerifyProps, LogoVerifyState> {
       <div className="logo-verify container">
         {this.props.logo && (
           <div className="header-wrapper">
-            <Link to={`/levels/${this.props.logo.level}`} className="header-back">
+            <Link to={`/levels/${this.props.logo.levelId}`} className="header-back">
               <SVGBackArrow height="24px"/>
             </Link>
             <h3 className="header-title">Guess the logo!</h3>

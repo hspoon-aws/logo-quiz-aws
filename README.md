@@ -50,7 +50,7 @@ Report bugs or feature requests by opening an [issue](https://github.com/hspoon-
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                         MongoDB                                  │
+│                        DynamoDB                                  │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐  │
 │  │    Users    │  │   Levels    │  │         Logos           │  │
 │  └─────────────┘  └─────────────┘  └─────────────────────────┘  │
@@ -64,9 +64,9 @@ Report bugs or feature requests by opening an [issue](https://github.com/hspoon-
 | Frontend | React 18, TypeScript, Redux, Vite, SCSS |
 | Backend | NestJS 10, TypeScript, Passport JWT |
 | Real-time | Socket.io 4.7 (WebSocket) |
-| Database | MongoDB with Mongoose 8 |
+| Database | DynamoDB (AWS SDK v3) |
 | Auth | Firebase Authentication |
-| Container | Docker Compose |
+| Container | Docker/Finch |
 
 ### Monorepo Structure
 
@@ -82,8 +82,8 @@ logo-quiz-aws/
 │   │       │   ├── logo/       # Logos REST API
 │   │       │   └── user/       # Users REST API
 │   │       └── shared/
-│   │           ├── schema/     # Mongoose schemas
-│   │           └── service/    # Shared services
+│   │           ├── schema/     # DynamoDB entity definitions
+│   │           └── service/    # Shared services (incl. DynamoDBService)
 │   │
 │   └── logo-quiz/              # React frontend
 │       └── src/
@@ -177,25 +177,30 @@ Score calculation: `points = max(10, 100 - (timeTaken / totalTime) * 90)`
 
 ## Contribute
 
-You'll need Docker to run an instance of the database server. Then run the following commands.
+You'll need Docker or Finch to run the local DynamoDB instance. Then run the following commands.
 
-1. Run database
-```
-docker compose up mongodb
+1. Start DynamoDB local
+```bash
+npm run start:dynamodb
+# Or manually: finch run -d -p 8000:8000 --name dynamodb-local amazon/dynamodb-local
 ```
 
-2. Run backend
+2. Seed the database (first time only)
+```bash
+npm run seed:dynamodb
 ```
-docker compose up api
-```
-The backend will run in port 3333
 
-3. Run frontend
+3. Run backend
+```bash
+npm run start:api
 ```
-docker compose up web
+The backend will run on port 3333
+
+4. Run frontend
+```bash
+npm run start:frontend
 ```
- 
-The frontend will run in port 4200
+The frontend will run on port 4200
 
 ## Resources
 

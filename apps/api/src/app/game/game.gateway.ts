@@ -263,7 +263,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const allLogos = await this.logoService.findAll();
     const shuffled = allLogos.sort(() => Math.random() - 0.5);
     const selectedLogos = shuffled.slice(0, room.settings.logoCount);
-    const logoIds = selectedLogos.map(l => l._id);
+    const logoIds = selectedLogos.map((l) => l.logoId);
 
     // Start the game
     const updatedRoom = await this.gameRoomService.startGame(roomCode, logoIds);
@@ -272,7 +272,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // Create sessions for all players (including host)
     const hostUserId = (hostClient.data && hostClient.data.user && hostClient.data.user.sub) || null;
     await this.gameSessionService.createSession(
-      room._id,
+      roomCode,
       room.hostSocketId,
       room.hostDisplayName,
       hostUserId,
@@ -280,10 +280,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     for (const player of room.players) {
       await this.gameSessionService.createSession(
-        room._id,
+        roomCode,
         player.socketId,
         player.displayName,
-        player.user || null,
+        player.userId || undefined,
       );
     }
 
@@ -310,13 +310,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   private sendCurrentLogo(roomCode: string, logo: Logo, index: number, total: number) {
-    // Access the raw MongoDB document to get the actual field values
-    // Note: The mongoose schema field names may differ from actual database fields
-    const logoDoc = logo as any;
-    const rawDoc = logoDoc._doc || logoDoc.toObject?.() || logoDoc;
-
     // Generate obfuscatedName if not present
-    let obfuscatedName = rawDoc.obfuscatedName || logo.obfuscatedName || '';
+    let obfuscatedName = logo.obfuscatedName || '';
     if (!obfuscatedName && logo.name) {
       obfuscatedName = logo.name.toLowerCase().replace(/[a-z]/gi, '*').replace(/ /g, '_');
     }
@@ -338,8 +333,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     const logoDto: GameLogoDto = {
-      logoId: logo._id,
-      obfuscatedImageUrl: rawDoc.obfuscatedImageUrl || rawDoc.obfuscatedLogoUrl || '',
+      logoId: logo.logoId,
+      obfuscatedImageUrl: logo.obfuscatedImageUrl || '',
       letters: letters,
       obfuscatedName: obfuscatedName,
       logoIndex: index,
@@ -361,14 +356,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
 
       // Get the current logo
-      const currentLogoId = room.logos[room.currentLogoIndex];
-      if (data.logoId !== currentLogoId.toString()) {
+      const currentLogoId = room.logoIds[room.currentLogoIndex];
+      if (data.logoId !== currentLogoId) {
         // Answering wrong logo (maybe out of sync)
         return { event: 'game:answer-rejected', data: { reason: 'Wrong logo' } };
       }
 
       // Validate the answer - normalize by removing spaces for comparison
-      const logo = await this.logoService.findOne(currentLogoId.toString());
+      const logo = await this.logoService.findOne(currentLogoId);
       const normalizedGuess = data.guess.toLowerCase().replace(/\s/g, '');
       const normalizedName = logo ? logo.name.toLowerCase().replace(/\s/g, '') : '';
       const isCorrect = logo && normalizedName === normalizedGuess;
@@ -376,9 +371,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // Record the answer
       const elapsedTime = this.gameTimerService.getElapsedTime(room.roomCode);
       const { session, points } = await this.gameSessionService.recordAnswer(
-        room._id,
+        room.roomCode,
         client.id,
-        currentLogoId.toString(),
+        currentLogoId,
         isCorrect,
         elapsedTime,
         room.settings.timeLimit,
@@ -393,13 +388,13 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
 
       // Update leaderboard for everyone (scores change on both correct and wrong answers)
-      const leaderboard = await this.gameSessionService.getLeaderboard(room._id);
+      const leaderboard = await this.gameSessionService.getLeaderboard(room.roomCode);
       this.server.to(room.roomCode).emit('game:score-update', { leaderboard });
 
       // If correct, broadcast the answer to everyone and advance to next logo
       if (isCorrect) {
         // Find the player's display name
-        const player = room.players.find(p => p.socketId === client.id);
+        const player = room.players.find((p) => p.socketId === client.id);
         const solverName = player ? player.displayName :
           (room.hostSocketId === client.id ? room.hostDisplayName : 'Someone');
 
@@ -413,12 +408,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         // Advance to next logo after a short delay (let players see the answer)
         const nextIndex = room.currentLogoIndex + 1;
         setTimeout(async () => {
-          if (nextIndex < room.logos.length) {
+          if (nextIndex < room.logoIds.length) {
             const updatedRoom = await this.gameRoomService.advanceToNextLogo(room.roomCode);
             if (updatedRoom) {
-              const nextLogo = await this.logoService.findOne(room.logos[nextIndex].toString());
+              const nextLogo = await this.logoService.findOne(room.logoIds[nextIndex]);
               if (nextLogo) {
-                this.sendCurrentLogo(room.roomCode, nextLogo as any, nextIndex, room.logos.length);
+                this.sendCurrentLogo(room.roomCode, nextLogo, nextIndex, room.logoIds.length);
               }
             }
           } else {
@@ -445,9 +440,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     const gameTime = room.settings.timeLimit - this.gameTimerService.getTimeRemaining(roomCode);
     const finalScoreboard = await this.gameSessionService.finalizeSessions(
-      room._id,
+      roomCode,
       gameTime,
-      room.logos.length,
+      room.logoIds.length,
     );
 
     this.server.to(roomCode).emit('game:end', finalScoreboard);

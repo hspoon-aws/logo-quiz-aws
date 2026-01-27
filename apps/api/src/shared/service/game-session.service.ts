@@ -1,56 +1,64 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { Model } from 'mongoose';
+import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import {
   GameSession,
   GameAnswer,
   PlayerScore,
   FinalScoreboardDto,
 } from '@logo-quiz/models';
+import { DynamoDBService, TABLES } from './dynamodb.service';
 
 @Injectable()
 export class GameSessionService {
-  constructor(
-    @Inject('GAME_SESSION_MODEL') private readonly gameSessionModel: Model<GameSession>,
-  ) {}
+  constructor(@Inject(forwardRef(() => DynamoDBService)) private readonly dynamodb: DynamoDBService) {}
 
   async createSession(
-    gameRoomId: string,
+    roomCode: string,
     socketId: string,
     displayName: string,
     userId?: string,
   ): Promise<GameSession> {
     // Check if session already exists
-    const existingSession = await this.gameSessionModel.findOne({
-      gameRoom: gameRoomId,
-      socketId,
-    }).exec();
-
+    const existingSession = await this.findByRoomAndSocket(roomCode, socketId);
     if (existingSession) {
       return existingSession;
     }
 
-    const session = new this.gameSessionModel({
-      gameRoom: gameRoomId,
-      user: userId || null,
-      displayName,
+    const now = new Date().toISOString();
+    const session: GameSession = {
+      roomCode,
       socketId,
+      userId: userId || undefined,
+      displayName,
       score: 0,
       answers: [],
       correctAnswers: 0,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    await this.dynamodb.put({
+      TableName: TABLES.GAME_SESSIONS,
+      Item: session,
     });
 
-    return await session.save();
+    return session;
   }
 
-  async findByRoomAndSocket(gameRoomId: string, socketId: string): Promise<GameSession | null> {
-    return this.gameSessionModel.findOne({
-      gameRoom: gameRoomId,
-      socketId,
-    }).exec();
+  async findByRoomAndSocket(roomCode: string, socketId: string): Promise<GameSession | null> {
+    return this.dynamodb.get<GameSession>({
+      TableName: TABLES.GAME_SESSIONS,
+      Key: { roomCode, socketId },
+    });
   }
 
-  async findAllByRoom(gameRoomId: string): Promise<GameSession[]> {
-    return this.gameSessionModel.find({ gameRoom: gameRoomId }).exec();
+  async findAllByRoom(roomCode: string): Promise<GameSession[]> {
+    return this.dynamodb.query<GameSession>({
+      TableName: TABLES.GAME_SESSIONS,
+      KeyConditionExpression: 'roomCode = :roomCode',
+      ExpressionAttributeValues: {
+        ':roomCode': roomCode,
+      },
+    });
   }
 
   calculatePoints(timeTaken: number, totalGameTime: number): number {
@@ -63,20 +71,20 @@ export class GameSessionService {
   }
 
   async recordAnswer(
-    gameRoomId: string,
+    roomCode: string,
     socketId: string,
     logoId: string,
     correct: boolean,
     timeTaken: number,
     totalGameTime: number,
   ): Promise<{ session: GameSession; points: number }> {
-    const session = await this.findByRoomAndSocket(gameRoomId, socketId);
+    const session = await this.findByRoomAndSocket(roomCode, socketId);
     if (!session) {
       throw new Error('Session not found');
     }
 
     // Check if already answered this logo
-    const alreadyAnswered = session.answers.some(a => a.logo === logoId);
+    const alreadyAnswered = session.answers.some((a) => a.logoId === logoId);
     if (alreadyAnswered) {
       return { session, points: 0 };
     }
@@ -86,11 +94,11 @@ export class GameSessionService {
     const points = correct ? this.calculatePoints(timeTaken, totalGameTime) : -wrongAnswerPenalty;
 
     const answer: GameAnswer = {
-      logo: logoId,
+      logoId,
       correct,
       timeTaken,
       points,
-      answeredAt: new Date(),
+      answeredAt: new Date().toISOString(),
     };
 
     session.answers.push(answer);
@@ -102,14 +110,26 @@ export class GameSessionService {
       session.score = Math.max(0, session.score + points);
     }
 
-    await session.save();
+    await this.dynamodb.update({
+      TableName: TABLES.GAME_SESSIONS,
+      Key: { roomCode, socketId },
+      UpdateExpression:
+        'SET answers = :answers, score = :score, correctAnswers = :correctAnswers, updatedAt = :updatedAt',
+      ExpressionAttributeValues: {
+        ':answers': session.answers,
+        ':score': session.score,
+        ':correctAnswers': session.correctAnswers,
+        ':updatedAt': new Date().toISOString(),
+      },
+    });
+
     return { session, points };
   }
 
-  async getLeaderboard(gameRoomId: string): Promise<PlayerScore[]> {
-    const sessions = await this.findAllByRoom(gameRoomId);
+  async getLeaderboard(roomCode: string): Promise<PlayerScore[]> {
+    const sessions = await this.findAllByRoom(roomCode);
     return sessions
-      .map(s => ({
+      .map((s) => ({
         displayName: s.displayName,
         score: s.score,
         correctAnswers: s.correctAnswers,
@@ -117,14 +137,22 @@ export class GameSessionService {
       .sort((a, b) => b.score - a.score);
   }
 
-  async finalizeSessions(gameRoomId: string, gameTime: number, totalLogos: number): Promise<FinalScoreboardDto> {
-    const sessions = await this.findAllByRoom(gameRoomId);
+  async finalizeSessions(roomCode: string, gameTime: number, totalLogos: number): Promise<FinalScoreboardDto> {
+    const sessions = await this.findAllByRoom(roomCode);
     const sortedSessions = sessions.sort((a, b) => b.score - a.score);
 
     // Update final ranks
     for (let i = 0; i < sortedSessions.length; i++) {
       sortedSessions[i].finalRank = i + 1;
-      await sortedSessions[i].save();
+      await this.dynamodb.update({
+        TableName: TABLES.GAME_SESSIONS,
+        Key: { roomCode, socketId: sortedSessions[i].socketId },
+        UpdateExpression: 'SET finalRank = :rank, updatedAt = :updatedAt',
+        ExpressionAttributeValues: {
+          ':rank': i + 1,
+          ':updatedAt': new Date().toISOString(),
+        },
+      });
     }
 
     return {
@@ -139,7 +167,13 @@ export class GameSessionService {
     };
   }
 
-  async deleteSessionsByRoom(gameRoomId: string): Promise<void> {
-    await this.gameSessionModel.deleteMany({ gameRoom: gameRoomId }).exec();
+  async deleteSessionsByRoom(roomCode: string): Promise<void> {
+    const sessions = await this.findAllByRoom(roomCode);
+    for (const session of sessions) {
+      await this.dynamodb.delete({
+        TableName: TABLES.GAME_SESSIONS,
+        Key: { roomCode, socketId: session.socketId },
+      });
+    }
   }
 }

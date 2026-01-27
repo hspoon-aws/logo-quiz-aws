@@ -1,32 +1,33 @@
 version: '3.8'
 
 services:
-  mongodb:
-    image: mongo
+  dynamodb-local:
+    image: amazon/dynamodb-local:latest
+    container_name: dynamodb-local
     restart: always
     ports:
-      - 27017:27017
+      - 8000:8000
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath /data"
     volumes:
-      - ./docker/api/init-mongo.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
-      - ./docker/api/mongo:/data/db
-      - ./docker/api/icon_path_64.txt:/icon_path_64.txt:ro
-    environment:
-      MONGO_INITDB_DATABASE: logo-quiz
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: example
+      - ./docker/dynamodb:/data
     networks:
       - app-network
 
   api:
     build:
       context: .
-      dockerfile: api.Dockerfile
+      dockerfile: Dockerfile
     ports:
       - "3333:3333"
     environment:
-      - MONGODB_URI=mongodb://root:example@mongodb:27017/logo-quiz # Internal connection uses default MongoDB port
+      - NODE_ENV=development
+      - AWS_REGION=us-east-1
+      - DYNAMODB_ENDPOINT=http://dynamodb-local:8000
+      - DYNAMODB_TABLE_PREFIX=LogoQuiz
+      - APP_SALT=mysalt
+      - APP_SESSION_SECRET=mysecret
     depends_on:
-      - mongodb
+      - dynamodb-local
     networks:
       - app-network
     restart: on-failure
@@ -42,10 +43,6 @@ services:
     networks:
       - app-network
     restart: on-failure
-
-
-# volumes:
-#   mongodb_data:
 
 networks:
   app-network:

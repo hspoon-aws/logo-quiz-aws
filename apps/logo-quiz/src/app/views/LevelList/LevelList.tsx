@@ -72,7 +72,7 @@ export class LevelList extends React.Component<LevelListProps> {
           numLogosToUnlock={this.getNumLogosToUnlock(level)}
           isLocked={this.isLevelLocked(level)}
           level={level}
-          key={level._id}
+          key={level.levelId}
         />
       );
     });

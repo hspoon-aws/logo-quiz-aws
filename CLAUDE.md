@@ -4,15 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Logo Quiz AWS is a full-stack web application for guessing company logos. Built with React 18.2, NestJS 10.3, MongoDB (Mongoose 8), and TypeScript 5.3 in a monorepo structure.
+Logo Quiz AWS is a full-stack web application for guessing company logos. Built with React 18.2, NestJS 10.3, DynamoDB (AWS SDK v3), and TypeScript 5.3 in a monorepo structure.
 
 ## Common Commands
 
 ### Development
 ```bash
-npm run start:db               # Start MongoDB via finch compose
+npm run start:dynamodb         # Start DynamoDB local via finch (port 8000)
 npm run start:api              # Start backend dev server (port 3333) using tsx watch
 npm run start:frontend         # Start frontend dev server (port 4200) using Vite
+npm run seed:dynamodb          # Seed DynamoDB with initial levels and logos data
 ```
 
 ### Build
@@ -29,9 +30,9 @@ npm run lint                   # Run ESLint
 npm run format                 # Auto-format with Prettier
 ```
 
-### Docker Compose (full stack)
+### Docker/Finch (containers)
 ```bash
-docker compose up mongodb      # Database only
+finch run -d -p 8000:8000 --name dynamodb-local amazon/dynamodb-local  # DynamoDB local
 docker compose up api          # API service
 docker compose up web          # Frontend service
 ```
@@ -77,7 +78,8 @@ docker compose up web          # Frontend service
 ### Backend (apps/api)
 - NestJS 10.3 modules: AuthModule, LevelModule, LogoModule, UserModule, GameModule
 - Passport 0.7 with JWT/Bearer strategies for route protection
-- MongoDB via Mongoose 8 (schemas in apps/api/src/shared/schema/)
+- DynamoDB via AWS SDK v3 (@aws-sdk/client-dynamodb, @aws-sdk/lib-dynamodb)
+- DynamoDBService (`apps/api/src/shared/service/dynamodb.service.ts`) - centralized database client
 - Socket.io 4.7 for WebSocket support (game rooms, real-time battles)
 - Winston 3.11 for logging with daily rotate file support
 
@@ -91,9 +93,23 @@ docker compose up web          # Frontend service
 ## Environment Configuration
 
 Backend config (`apps/api/src/config.ts`) reads from `apps/api/.env`:
-- `NODE_ENV`, `MONGODB_URI`, `APP_SALT`, `APP_SESSION_SECRET`
+- `NODE_ENV` - development/production
+- `AWS_REGION` - AWS region (default: us-east-1)
+- `DYNAMODB_ENDPOINT` - DynamoDB endpoint (local: http://localhost:8000)
+- `APP_SALT`, `APP_SESSION_SECRET` - Authentication secrets
 
 Frontend environments in `apps/logo-quiz/src/environments/`
+
+## DynamoDB Tables
+
+| Table | Partition Key | Sort Key | GSI |
+|-------|--------------|----------|-----|
+| `LogoQuiz-Users` | `email` (S) | - | - |
+| `LogoQuiz-Levels` | `levelId` (S) | - | - |
+| `LogoQuiz-Logos` | `logoId` (S) | - | `levelId-index` |
+| `LogoQuiz-UserState` | `odUserId` (S) | - | - |
+| `LogoQuiz-GameRooms` | `roomCode` (S) | - | - |
+| `LogoQuiz-GameSessions` | `gameRoomId` (S) | `odSocketId` (S) | - |
 
 ## Test Credentials
 

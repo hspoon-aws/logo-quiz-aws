@@ -1,24 +1,31 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { UserCompletedLogo } from '@logo-quiz/models';
-import { Model } from 'mongoose';
+import { v4 as uuidv4 } from 'uuid';
+import { DynamoDBService, TABLES } from './dynamodb.service';
 
+// Note: This service is largely unused since UserState now tracks completed logos directly
+// Keeping for backwards compatibility
 @Injectable()
 export class UserCompletedLogoService {
-  constructor(
-    @Inject('USER_COMPLETED_LOGO_MODEL')
-    private readonly userCompletedLogoModel: Model<UserCompletedLogo>) {
-  }
+  constructor(@Inject(forwardRef(() => DynamoDBService)) private readonly dynamodb: DynamoDBService) {}
 
   async insert(stateId: string, logoId: string): Promise<UserCompletedLogo> {
-    const instance = new this.userCompletedLogoModel({
-      state: stateId,
-      logo: logoId
-    });
+    const now = new Date().toISOString();
+    const record: UserCompletedLogo = {
+      id: uuidv4(),
+      stateId,
+      logoId,
+      createdAt: now,
+      updatedAt: now,
+    };
 
-    return await instance.save();
+    // This could be stored in a separate table if needed
+    // For now, we just return the record as UserState tracks logos
+    return record;
   }
 
-  findByState(stateId: string): Promise<UserCompletedLogo[]> {
-    return this.userCompletedLogoModel.find({ state: stateId }).exec();
+  async findByState(stateId: string): Promise<UserCompletedLogo[]> {
+    // This is deprecated - use UserStateService.getUserLogos instead
+    return [];
   }
 }

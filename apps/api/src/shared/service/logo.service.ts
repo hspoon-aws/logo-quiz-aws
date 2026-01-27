@@ -1,47 +1,88 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { CreateLogoDto, Level, Logo, UserState } from '@logo-quiz/models';
-import { DocumentQuery, Model } from 'mongoose';
+import { Injectable, Inject, forwardRef } from '@nestjs/common';
+import { Level, Logo, UserState } from '@logo-quiz/models';
+import { v4 as uuidv4 } from 'uuid';
+import { DynamoDBService, TABLES } from './dynamodb.service';
 
 @Injectable()
 export class LogoService {
-  constructor(@Inject('LOGO_MODEL') private readonly logoModel: Model<Logo>) {}
+  constructor(@Inject(forwardRef(() => DynamoDBService)) private readonly dynamodb: DynamoDBService) {}
 
-  async create(createLogoDto: CreateLogoDto): Promise<Logo> {
-    const createdLogo = new this.logoModel(createLogoDto);
-    return await createdLogo.save();
+  async create(createLogoDto: Partial<Logo>): Promise<Logo> {
+    const now = new Date().toISOString();
+    const newLogo: Logo = {
+      logoId: uuidv4(),
+      levelId: createLogoDto.levelId || '',
+      obfuscatedImageUrl: createLogoDto.obfuscatedImageUrl || '',
+      realImageUrl: createLogoDto.realImageUrl || '',
+      name: createLogoDto.name || '',
+      letters: createLogoDto.letters || '',
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    await this.dynamodb.put({
+      TableName: TABLES.LOGOS,
+      Item: newLogo,
+    });
+
+    return newLogo;
   }
 
   async findAll(): Promise<Logo[]> {
-    return await this.logoModel
-    .find()
-    .populate({
-      path: 'level',
-      select: '-logos',
-    })
-    .exec();
+    return this.dynamodb.scan<Logo>({
+      TableName: TABLES.LOGOS,
+    });
   }
 
-  async findAllByLevel(levelId: string, projection: string = 'obfuscatedImageUrl'): Promise<Logo[]> {
-    return await this.logoModel.find({ level: levelId }, projection).exec();
+  async findAllByLevel(levelId: string, projection?: string): Promise<Logo[]> {
+    const logos = await this.dynamodb.query<Logo>({
+      TableName: TABLES.LOGOS,
+      IndexName: 'levelId-index',
+      KeyConditionExpression: 'levelId = :levelId',
+      ExpressionAttributeValues: {
+        ':levelId': levelId,
+      },
+    });
+
+    // Apply projection if specified (filter out sensitive fields)
+    if (projection === 'obfuscatedImageUrl') {
+      return logos.map((logo) => ({
+        logoId: logo.logoId,
+        levelId: logo.levelId,
+        obfuscatedImageUrl: logo.obfuscatedImageUrl,
+        letters: logo.letters,
+        name: logo.name, // Include name for answer validation
+        realImageUrl: '', // Hide real URL
+        createdAt: logo.createdAt,
+        updatedAt: logo.updatedAt,
+      }));
+    }
+
+    return logos;
   }
 
-  async findOne(id: string): Promise<DocumentQuery<Logo | null, Logo, {}> & {}> {
-    return this.logoModel.findById(id) as any;
+  async findOne(logoId: string): Promise<Logo | null> {
+    return this.dynamodb.get<Logo>({
+      TableName: TABLES.LOGOS,
+      Key: { logoId },
+    });
   }
 
-  findNextInvalidLogo(currentLogo: Logo, level: Level, state: UserState): Logo {
-    let nextLogo: Logo = null;
-    // find index of next logo
-    let index = level.logos.findIndex(item => item._id.toString() === currentLogo._id.toString()) + 1;
+  findNextInvalidLogo(currentLogo: Logo, level: Level, state: UserState): Logo | null {
+    if (!level.logos || level.logos.length === 0) return null;
+
+    let nextLogo: Logo | null = null;
+    // Find index of current logo
+    let index = level.logos.findIndex((item) => item.logoId === currentLogo.logoId) + 1;
     let loop = 0;
 
     while (nextLogo === null && loop < level.logos.length) {
-      // make sure index is never bigger than index array
+      // Make sure index wraps around
       index = index >= level.logos.length ? 0 : index;
-      const item: Logo = level.logos[index].toJSON() as Logo;
+      const item = level.logos[index];
 
-      // comparing with toString() is necessary, otherwise the comparison doesn't work
-      if (!state.logos.includes(item._id)) {
+      // Check if logo is not already completed by user
+      if (!state.logos.includes(item.logoId)) {
         nextLogo = item;
       }
       index++;
@@ -52,17 +93,25 @@ export class LogoService {
   }
 
   async findAllCount(): Promise<number> {
-    return this.logoModel
-    .countDocuments();
+    const logos = await this.dynamodb.scan<Logo>({
+      TableName: TABLES.LOGOS,
+      Select: 'COUNT',
+    });
+    // When using Select: 'COUNT', we need to get the count differently
+    // Actually scan returns items, so let's just count them
+    const allLogos = await this.findAll();
+    return allLogos.length;
   }
 
   async isGameCompleted(state: UserState): Promise<boolean> {
-    return (await this.findAllCount()) === state.logos.length;
+    const totalCount = await this.findAllCount();
+    return totalCount === state.logos.length;
   }
 
   async getValidLogos(level: Level, state: UserState): Promise<number> {
+    if (!level.logos) return 0;
     return level.logos.reduce((total: number, logo: Logo) => {
-      return state.logos.includes(logo._id) ? ++total : total;
+      return state.logos.includes(logo.logoId) ? total + 1 : total;
     }, 0);
   }
 }

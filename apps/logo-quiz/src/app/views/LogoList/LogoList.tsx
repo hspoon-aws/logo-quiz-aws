@@ -36,7 +36,7 @@ class LogoList extends React.Component<LogoListProps> {
     const logos = (this.props.level && this.props.level.logos) || [];
 
     const renderedLogos = logos.map(logo => (
-      <div className="col-4 col-sm-3 logo-preview-wrapper" key={logo._id}>
+      <div className="col-4 col-sm-3 logo-preview-wrapper" key={logo.logoId}>
         <LogoPreview logo={logo} />
       </div>
     ));

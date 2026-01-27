@@ -66,7 +66,7 @@ export class LevelPreview extends React.Component<LevelPreviewProps> {
     return (
       <>
         {!this.props.isLocked && (
-          <Link className="level-button" to={`/levels/${this.props.level._id}`}>
+          <Link className="level-button" to={`/levels/${this.props.level.levelId}`}>
             {this.getLevelContent()}
           </Link>
         )}

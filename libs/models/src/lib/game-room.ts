@@ -1,38 +1,36 @@
-import { Document } from 'mongoose';
 import { Timestampable } from './timestampable';
 
 export interface GameRoomSettings {
   timeLimit: number; // seconds
   maxPlayers: number;
   minPlayers: number;
-  level?: string;
+  levelId?: string;
   logoCount: number;
   autoStart: boolean;
 }
 
 export interface GameRoomPlayer {
-  user?: string;
+  userId?: string;
   displayName: string;
-  joinedAt: Date;
+  joinedAt: string; // ISO date string
   isReady: boolean;
   socketId: string;
 }
 
 export type GameRoomStatus = 'waiting' | 'starting' | 'in_progress' | 'completed' | 'cancelled';
 
-export interface GameRoom extends Document, Timestampable {
-  _id: string;
-  roomCode: string;
-  host?: string;
+export interface GameRoom extends Timestampable {
+  roomCode: string; // Partition key
+  hostUserId?: string;
   hostSocketId: string;
   hostDisplayName: string;
   players: GameRoomPlayer[];
   settings: GameRoomSettings;
   status: GameRoomStatus;
-  logos: string[];
+  logoIds: string[]; // Array of logo IDs for the game
   currentLogoIndex: number;
-  gameStartedAt?: Date;
-  gameEndedAt?: Date;
+  gameStartedAt?: string; // ISO date string
+  gameEndedAt?: string; // ISO date string
 }
 
 // DTOs for WebSocket events

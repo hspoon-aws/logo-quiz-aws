@@ -4,13 +4,15 @@ import { systemReducer } from './system/reducers';
 import { levelReducer } from './level';
 import { levelsReducer } from './levels';
 import { authReducer } from './auth/reducers';
+import { gameRoomReducer } from './gameRoom';
 
 const appReducer = combineReducers({
   logo: logoReducer,
   level: levelReducer,
   levels: levelsReducer,
   system: systemReducer,
-  auth: authReducer
+  auth: authReducer,
+  gameRoom: gameRoomReducer,
 });
 
 export const rootReducer = (state: any, action: any) => {
@@ -23,3 +25,4 @@ export * from './logo';
 export * from './level';
 export * from './levels';
 export * from './auth';
+export * from './gameRoom';

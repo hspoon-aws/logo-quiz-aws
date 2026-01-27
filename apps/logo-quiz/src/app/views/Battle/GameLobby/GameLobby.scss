@@ -1,0 +1,158 @@
+.game-lobby {
+  &__wrapper {
+    background: #ffffff;
+    border-radius: 10px;
+    padding: 30px 40px;
+    max-width: 500px;
+    margin: 0 auto;
+  }
+
+  &__loading {
+    text-align: center;
+    padding: 40px;
+    color: white;
+    font-size: 1.2em;
+  }
+
+  &__room-code {
+    text-align: center;
+    margin-bottom: 30px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 10px;
+
+    &-label {
+      display: block;
+      font-size: 0.85em;
+      color: #666;
+      margin-bottom: 8px;
+    }
+
+    &-value {
+      display: block;
+      font-size: 2.5em;
+      font-weight: 700;
+      letter-spacing: 0.3em;
+      color: #1D3557;
+    }
+  }
+
+  &__settings {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 25px;
+    padding-bottom: 25px;
+    border-bottom: 1px solid #e0e0e0;
+  }
+
+  &__setting {
+    text-align: center;
+
+    &-label {
+      display: block;
+      font-size: 0.75em;
+      color: #666;
+      margin-bottom: 4px;
+    }
+
+    &-value {
+      font-weight: 600;
+      color: #1D3557;
+    }
+  }
+
+  &__players {
+    margin-bottom: 25px;
+
+    &-title {
+      font-size: 1em;
+      color: #1D3557;
+      margin-bottom: 15px;
+    }
+
+    &-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+  }
+
+  &__player {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    margin-bottom: 8px;
+
+    &-name {
+      font-weight: 500;
+      color: #1D3557;
+    }
+
+    &-status {
+      font-size: 0.85em;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-weight: 500;
+
+      &.ready {
+        background: #d4edda;
+        color: #155724;
+      }
+
+      &.waiting {
+        background: #fff3cd;
+        color: #856404;
+      }
+    }
+  }
+
+  &__host-badge {
+    font-size: 0.75em;
+    background: #E63946;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-left: 10px;
+  }
+
+  &__error {
+    color: #E63946;
+    font-size: 0.9em;
+    text-align: center;
+    padding: 10px;
+    background: rgba(230, 57, 70, 0.1);
+    border-radius: 6px;
+    margin-bottom: 20px;
+  }
+
+  &__actions {
+    text-align: center;
+    margin-bottom: 15px;
+  }
+
+  &__start,
+  &__ready {
+    cursor: pointer;
+    width: 100%;
+    max-width: 250px;
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  }
+
+  &__ready.ready {
+    background: #6c757d;
+  }
+
+  &__hint {
+    text-align: center;
+    font-size: 0.85em;
+    color: #666;
+    margin: 0;
+  }
+}

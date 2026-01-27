@@ -17,7 +17,10 @@ export class App extends Component {
             alt="logos"
           />
           <Link className="main__button vh-center" to="/levels">
-            Play
+            Play Solo
+          </Link>
+          <Link className="main__button main__button--battle vh-center" to="/battle">
+            Battle Mode
           </Link>
           
           <div className="main__footer">This project is forked from <br/> <a href="https://github.com/logo-quiz/logo-quiz">Logo-quiz Github</a></div>

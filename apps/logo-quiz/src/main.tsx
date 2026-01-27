@@ -1,57 +1,61 @@
-import * as React from 'react';
-import * as ReactDOM from 'react-dom';
-import { BrowserRouter as Router, Route } from 'react-router-dom';
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
+import './styles.scss';
 import { App } from './app/app';
 import LevelList from './app/views/LevelList/LevelList';
 import LogoVerify from './app/views/LogoVerify/LogoVerify';
 import LogoList from './app/views/LogoList/LogoList';
 import LogOut from './app/views/LogOut/LogOut';
 import { Provider } from 'react-redux';
-import { applyMiddleware, createStore } from 'redux';
+import { legacy_createStore as createStore, applyMiddleware } from 'redux';
 import { rootReducer } from './store';
-import thunkMiddleware from 'redux-thunk';
-import { createLogger } from 'redux-logger';
-import { composeWithDevTools } from 'redux-devtools-extension';
+import { thunk } from 'redux-thunk';
 import Login from './app/views/Login/Login';
 import './shared/api/http-interceptor';
 import SignUp from './app/views/SignUp/SignUp';
 import { FirebaseContext } from './shared/components/firebase/with-firebase';
 import { Firebase } from './shared/components/firebase/firebase';
 import { ROUTES } from './shared/utils/routes';
-import { environment } from '@logo-quiz/environment';
 import { ErrorBoundary } from './shared/components/error-boundary/error-boundary';
-
-const loggerMiddleware = createLogger();
-
-const middlewares = [
-  thunkMiddleware, //
-  environment.production ? null : loggerMiddleware,
-].filter(Boolean);
+import BattleMenu from './app/views/Battle/BattleMenu';
+import CreateRoom from './app/views/Battle/CreateRoom/CreateRoom';
+import JoinRoom from './app/views/Battle/JoinRoom/JoinRoom';
+import GameLobby from './app/views/Battle/GameLobby/GameLobby';
+import BattleGame from './app/views/Battle/BattleGame/BattleGame';
+import Scoreboard from './app/views/Battle/Scoreboard/Scoreboard';
 
 const store = createStore(
-  rootReducer, //
-  composeWithDevTools(applyMiddleware(...middlewares)),
+  rootReducer,
+  applyMiddleware(thunk),
 );
 
-const root = (
+const container = document.querySelector('logo-quiz-root');
+const root = createRoot(container!);
+
+root.render(
   <ErrorBoundary>
     <FirebaseContext.Provider value={new Firebase()}>
       <Provider store={store}>
         <Router>
-          <div>
-            <Route exact path="/" component={App} />
-            <Route path={ROUTES.LOGOS_INDIVIDUAL} component={LogoVerify} />
-            <Route path={ROUTES.LEVELS_INDIVIDUAL} component={LogoList} />
-            <Route exact path={ROUTES.LEVELS_LIST} component={LevelList} />
-            <Route exact path={ROUTES.LOGIN} component={Login} />
-            <Route exact path={ROUTES.LOGOUT} component={LogOut} />
-            <Route exact path={ROUTES.SIGNUP} component={SignUp} />
-          </div>
+          <Routes>
+            <Route path="/" element={<App />} />
+            <Route path={ROUTES.LOGOS_INDIVIDUAL} element={<LogoVerify />} />
+            <Route path={ROUTES.LEVELS_INDIVIDUAL} element={<LogoList />} />
+            <Route path={ROUTES.LEVELS_LIST} element={<LevelList />} />
+            <Route path={ROUTES.LOGIN} element={<Login />} />
+            <Route path={ROUTES.LOGOUT} element={<LogOut />} />
+            <Route path={ROUTES.SIGNUP} element={<SignUp />} />
+            <Route path={ROUTES.BATTLE} element={<BattleMenu />} />
+            <Route path={ROUTES.BATTLE_CREATE} element={<CreateRoom />} />
+            <Route path={ROUTES.BATTLE_JOIN} element={<JoinRoom />} />
+            <Route path={ROUTES.BATTLE_LOBBY} element={<GameLobby />} />
+            <Route path={ROUTES.BATTLE_GAME} element={<BattleGame />} />
+            <Route path={ROUTES.BATTLE_SCOREBOARD} element={<Scoreboard />} />
+          </Routes>
         </Router>
       </Provider>
     </FirebaseContext.Provider>
   </ErrorBoundary>
 );
-
-ReactDOM.render(root, document.querySelector('logo-quiz-root'));

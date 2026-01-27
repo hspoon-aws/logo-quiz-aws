@@ -31,7 +31,8 @@ export class LogoPreview extends React.Component<LogoPreviewProps> {
 
   getImageUrl() {
     const { logo } = this.props;
-    return logo.realImageUrl || logo.obfuscatedImageUrl;
+    const url = logo.realImageUrl || logo.obfuscatedImageUrl;
+    return url?.startsWith('/') ? url : `/${url}`;
   }
 
   render() {

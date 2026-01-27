@@ -5,9 +5,7 @@ import { Request, Response } from 'express';
 
 @Injectable()
 export class LoggerInterceptor implements NestInterceptor {
-  constructor(private logger: Logger) {
-    this.logger.setContext('Router');
-  }
+  private readonly logger = new Logger('Router');
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const [req, res]: [Request, Response] = context.getArgs();

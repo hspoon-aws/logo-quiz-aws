@@ -1,16 +1,17 @@
-import { AuthModule } from './../auth/auth.module';
 import { Module } from '@nestjs/common';
-import { SharedModule } from '../../shared/shared.module';
 import { LevelController } from './level.controller';
+import { LevelService } from '../../shared/service/level.service';
+import { LogoService } from '../../shared/service/logo.service';
+import { levelProvider } from '../../shared/providers/level.provider';
+import { logoProvider } from '../../shared/providers/logo.provider';
 
 @Module({
-  imports: [
-    AuthModule,
-    SharedModule
+  providers: [
+    ...levelProvider,
+    ...logoProvider,
+    LevelService,
+    LogoService,
   ],
-  controllers: [
-    LevelController
-  ]
+  controllers: [LevelController],
 })
-export class LevelModule {
-}
+export class LevelModule {}

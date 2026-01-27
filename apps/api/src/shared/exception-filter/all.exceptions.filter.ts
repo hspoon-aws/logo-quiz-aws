@@ -4,11 +4,9 @@ import { NotifierService } from '../service/notifier.service';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
-  constructor(
-    private logger: Logger,
-    private notifier: NotifierService) {
-    this.logger.setContext('Router');
-  }
+  private readonly logger = new Logger('Router');
+
+  constructor(private notifier: NotifierService) {}
 
   catch(exception: any, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
@@ -25,7 +23,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     const message = `[Request] [${req.method}] [${req.originalUrl}] - [${status}]`;
     this.logger.error(message, exception.message || exception);
-    this.notifier.notify(response);
+    if (this.notifier) {
+      this.notifier.notify(response);
+    }
     res.status(status).json(response);
   }
 }

@@ -1,20 +1,9 @@
-// import { Injectable } from '@nestjs/common';
-// import * as Airbrake from '@airbrake/node';
-import { config } from '@api/config';
+import { Injectable } from '@nestjs/common';
 
-// @Injectable()
+@Injectable()
 export class NotifierService {
-  private notifier: any;
-
-  constructor() {
-    // this.notifier = (new Airbrake.Notifier({
-    //   ...config.airBreak,
-    //   environment: config.environment,
-    // }));
-
-  }
-
   notify(args: any) {
-    this.notifier.notify(args);
+    // Airbrake notifier disabled - just log to console in development
+    console.error('[Notifier]', args);
   }
 }

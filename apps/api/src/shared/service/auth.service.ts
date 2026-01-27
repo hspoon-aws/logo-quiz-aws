@@ -1,13 +1,16 @@
 import { config } from '@api/config';
 import { UserService } from './user.service';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as jwt from 'jsonwebtoken';
 import { JwtPayload } from '../interfaces/jwt-payload.interface';
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly jwtService: JwtService, private userService: UserService) {}
+  constructor(
+    @Inject(JwtService) private readonly jwtService: JwtService,
+    @Inject(UserService) private userService: UserService,
+  ) {}
 
   async createToken(credentials: { email: string; password: string }) {
     const user = await this.userService.login(credentials);

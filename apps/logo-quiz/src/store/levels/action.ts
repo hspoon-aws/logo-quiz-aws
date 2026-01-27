@@ -10,6 +10,7 @@ import { Dispatch } from 'redux';
 // TODO the imported function 'fetchLevels' conflicts with this class' function 'fetchLevels'.
 // We'll need to come up with better naming, or expose the service methods in a namespace 'LevelService'.
 import { fetchLevels as apiFetchLevels } from '../../shared/services';
+import { getCompletedLogos } from '../../shared/helpers/completed-logos';
 
 export function requestLevels(): LevelsActionTypes {
   return {
@@ -42,7 +43,16 @@ export function fetchLevels() {
     dispatch(requestLevels());
     return apiFetchLevels()
       .then(levels => {
-        dispatch(requestLevelsSuccess(levels));
+        // Mark logos as validated based on localStorage for anonymous users
+        const completedLogos = getCompletedLogos();
+        const levelsWithValidation = levels.map(level => ({
+          ...level,
+          logos: level.logos.map(logo => ({
+            ...logo,
+            validated: completedLogos.includes(logo._id)
+          }))
+        }));
+        dispatch(requestLevelsSuccess(levelsWithValidation));
       })
       .catch(error => {
         dispatch(requestLevelsError(error));

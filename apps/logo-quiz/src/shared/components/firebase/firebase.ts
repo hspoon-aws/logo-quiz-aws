@@ -1,13 +1,13 @@
-import * as app from 'firebase/app';
-import 'firebase/analytics';
+import { initializeApp, FirebaseApp } from 'firebase/app';
+import { getAnalytics, Analytics } from 'firebase/analytics';
 import { environment } from '@logo-quiz/environment';
-import Analytics = firebase.analytics.Analytics;
 
 export class Firebase {
+  app: FirebaseApp;
   analytics: Analytics;
 
   constructor() {
-    app.initializeApp(environment.firebase);
-    this.analytics = app.analytics();
+    this.app = initializeApp(environment.firebase);
+    this.analytics = getAnalytics(this.app);
   }
 }

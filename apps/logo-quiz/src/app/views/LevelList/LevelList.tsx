@@ -4,6 +4,8 @@ import { Level } from '@logo-quiz/models';
 import { AppState, fetchLevels, flushLevels, flushLevel } from '@logo-quiz/store';
 import { ThunkDispatch } from 'redux-thunk';
 import { connect } from 'react-redux';
+import { Link } from 'react-router-dom';
+import SVGBackArrow from '../../icons/back-arrow';
 import './LevelList.scss';
 
 interface LevelListProps {
@@ -78,6 +80,9 @@ export class LevelList extends React.Component<LevelListProps> {
     return (
       <div className="levels container">
         <div className="header-wrapper">
+          <Link to="/" className="header-back">
+            <SVGBackArrow height="24px" />
+          </Link>
           <h3 className="header-title">Pick a level</h3>
         </div>
 

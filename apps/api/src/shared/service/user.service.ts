@@ -1,16 +1,12 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { CreateUserDto, Logo, User, UserLogo } from '@logo-quiz/models';
+import { CreateUserDto, User } from '@logo-quiz/models';
 import { Model, QueryFindOneAndUpdateOptions } from 'mongoose';
-import { UserStateService } from './user-state.service';
-import { LevelService } from './level.service';
 import { passwordHash } from '../utils/password-hash';
 
 @Injectable()
 export class UserService {
   constructor(
     @Inject('USER_MODEL') private readonly userModel: Model<User>,
-    private userStateService: UserStateService,
-    private levelService: LevelService,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
@@ -23,9 +19,7 @@ export class UserService {
   }
 
   async findOne(id: string): Promise<User> {
-    const user: User = await this.userModel.findById(id);
-    user.state = await this.userStateService.findByUser(id);
-    return user;
+    return await this.userModel.findById(id);
   }
 
   async findOneAndUpdate(
@@ -33,9 +27,7 @@ export class UserService {
     payload: any = {},
     updateOpts: QueryFindOneAndUpdateOptions = { new: true },
   ): Promise<User> {
-    const user: User = await this.userModel.findByIdAndUpdate(id, payload, updateOpts);
-    user.state = await this.userStateService.findByUser(id);
-    return user;
+    return await this.userModel.findByIdAndUpdate(id, payload, updateOpts);
   }
 
   async login(credentials: { email: string; password: string }) {
@@ -52,28 +44,11 @@ export class UserService {
   }
 
   async signup(credentials: { email: string; password: string }) {
-    // TODO make sure user doesn't exist before adding it to the DB
     const user = {
       email: credentials.email,
       password: passwordHash(credentials.password),
     };
     const instance = new this.userModel(user);
-    // create an empty userState for new users
-    this.userStateService.insert(instance.id);
     return await instance.save();
-  }
-
-  async getLevelLogos(userId: string, levelId: string): Promise<UserLogo[]> {
-    const user = await this.findOne(userId);
-    const level = await this.levelService.findOne(levelId);
-    return await level.logos.map((logo: Logo) => {
-      const completed =
-        user.state.logos.findIndex(state => (state as any).logo.toString() === logo._id.toString()) !== -1;
-      return {
-        _id: logo._id,
-        imageUrl: completed ? logo.realImageUrl : logo.obfuscatedImageUrl,
-        completed,
-      };
-    });
   }
 }

@@ -7,7 +7,7 @@ import { LogoService } from './logo.service';
 export class LevelService {
   constructor(
     @Inject('LEVEL_MODEL') private readonly levelModel: Model<Level>,
-    private logoService: LogoService,
+    @Inject(LogoService) private logoService: LogoService,
   ) {}
 
   async create(createLevelDto: CreateLevelDto): Promise<Level> {

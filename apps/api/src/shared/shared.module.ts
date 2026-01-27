@@ -34,9 +34,9 @@ const services = [
     ...services,
   ],
   exports: [
+    ...providers,
     ...services,
     DatabaseModule,
   ],
 })
-export class SharedModule {
-}
+export class SharedModule {}

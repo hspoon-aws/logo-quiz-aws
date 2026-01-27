@@ -1,6 +1,6 @@
 import * as React from 'react';
 import './LogoList.scss';
-import { RouteComponentProps } from 'react-router';
+import { useParams } from 'react-router-dom';
 import { Level } from '@logo-quiz/models';
 import { LogoPreview } from './components/LogoPreview/LogoPreview';
 import { AppState, fetchLevel } from '@logo-quiz/store';
@@ -9,18 +9,15 @@ import { connect } from 'react-redux';
 import { Link } from 'react-router-dom';
 import SVGBackArrow from '../../icons/back-arrow';
 
-interface MatchParams {
-  id: string;
-}
-
-interface LogoListProps extends RouteComponentProps<MatchParams> {
+interface LogoListProps {
+  levelId: string;
   fetchLevel: typeof fetchLevel;
   level: Level;
 }
 
 class LogoList extends React.Component<LogoListProps> {
   componentDidMount() {
-    this.props.fetchLevel(this.props.match.params.id);
+    this.props.fetchLevel(this.props.levelId);
   }
 
   getPlaceholders = () => {
@@ -72,7 +69,15 @@ const mapDispatchToProps = (dispatch: ThunkDispatch<{}, {}, any>) => ({
   fetchLevel: (id: string) => dispatch(fetchLevel(id)),
 });
 
-export default connect(
+const ConnectedLogoList = connect(
   mapStateToProps,
   mapDispatchToProps,
 )(LogoList as any);
+
+// Wrapper component to inject route params
+function LogoListWrapper() {
+  const { id } = useParams<{ id: string }>();
+  return <ConnectedLogoList levelId={id || ''} />;
+}
+
+export default LogoListWrapper;

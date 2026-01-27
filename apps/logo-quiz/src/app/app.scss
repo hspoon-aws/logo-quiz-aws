@@ -13,14 +13,30 @@
     background-color: #1D3557;
     height: 56px;
     max-width: 290px;
-    border-radius: 3px;
+    border-radius: 8px;
     font-size: 1.25em;
     font-weight: 600;
     width: 290px;
-    
+    border: none;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 15px rgba(29, 53, 87, 0.3);
+
     &, &:hover {
       text-decoration: none;
       color: white;
+    }
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(29, 53, 87, 0.4);
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+
+    &--battle {
+      margin-top: 15px;
     }
   }
 

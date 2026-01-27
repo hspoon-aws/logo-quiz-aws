@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { RouteComponentProps } from 'react-router';
+import { useParams } from 'react-router-dom';
 import './LogoVerify.scss';
 import { Logo } from '@logo-quiz/models';
 import {
@@ -25,16 +25,13 @@ import SVGDeleteLetter from '../../icons/delete-letter';
 import SVGStar from '../../icons/star';
 import SVGTwitter from '../../icons/twitter';
 
-interface MatchParams {
-  id: string;
-}
-
 interface LogoVerifyState {
   loadingGuess: number;
   loadingGuessDirection: 1 | -1;
 }
 
-interface LogoVerifyProps extends RouteComponentProps<MatchParams> {
+interface LogoVerifyProps {
+  logoId: string;
   guessLetter: typeof guessLetter;
   removeLetterFromGuess: typeof removeLetterFromGuess;
   fetchLogo: typeof fetchLogo;
@@ -66,25 +63,18 @@ class LogoVerify extends React.Component<LogoVerifyProps, LogoVerifyState> {
   }
 
   componentDidMount() {
-    this.loadComponent(this.props.match.params.id);
+    this.loadComponent(this.props.logoId);
     window.addEventListener('keyup', this.keyHandler);
   }
 
-  componentWillReceiveProps(nextProps: LogoVerifyProps) {
-    const currentLogoId = this.props.match.params.id;
-    const newLogoId = nextProps.match.params.id;
+  componentDidUpdate(prevProps: LogoVerifyProps) {
+    const currentLogoId = prevProps.logoId;
+    const newLogoId = this.props.logoId;
     if (currentLogoId !== newLogoId) {
       this.props.flushLogo();
       this.loadComponent(newLogoId);
     }
-  }
 
-  componentWillUnmount() {
-    this.props.flushLogo();
-    window.removeEventListener('keyup', this.keyHandler);
-  }
-
-  componentDidUpdate(prevProps: LogoVerifyProps) {
     const isFirstUpdate = prevProps.guess.length === 0;
     const hasChangedGuess = !this.compareGuesses(prevProps.guess, this.props.guess);
     if (!isFirstUpdate && hasChangedGuess && this.isGuessComplete(this.props.guess)) {
@@ -101,6 +91,11 @@ class LogoVerify extends React.Component<LogoVerifyProps, LogoVerifyState> {
       clearInterval(this.loadingInterval);
       this.loadingInterval = null;
     }
+  }
+
+  componentWillUnmount() {
+    this.props.flushLogo();
+    window.removeEventListener('keyup', this.keyHandler);
   }
 
   private startLoadingAnimation() {
@@ -218,12 +213,13 @@ class LogoVerify extends React.Component<LogoVerifyProps, LogoVerifyState> {
   }
 
   getImageUrl() {
-    return this.props.realImageUrl || this.props.logo.realImageUrl || this.props.logo.obfuscatedImageUrl;
+    const url = this.props.realImageUrl || this.props.logo.realImageUrl || this.props.logo.obfuscatedImageUrl;
+    return url?.startsWith('/') ? url : `/${url}`;
   }
 
   verifyLogo() {
     const guess = this.props.guess.map(letter => letter.char).join('');
-    this.props.validateLogo(this.props.match.params.id, guess);
+    this.props.validateLogo(this.props.logoId, guess);
   }
 
   guessLetter(letter: QuizLetter) {
@@ -257,13 +253,6 @@ class LogoVerify extends React.Component<LogoVerifyProps, LogoVerifyState> {
             <Link
               className="main__button lv-modal__button lv-modal__button--next"
               to={this.props.nextLogo._id}
-              innerRef={node => {
-                // `node` refers to the mounted DOM element
-                // or null when unmounted
-                if (node) {
-                  node.focus();
-                }
-              }}
             >
               <span className="lv-modal__back-text">Next logo</span>
               <SVGBackArrow className="lv-modal__front-icon" height="16px"/>
@@ -273,13 +262,6 @@ class LogoVerify extends React.Component<LogoVerifyProps, LogoVerifyState> {
           <Link
             className="lv-modal__button lv-modal__button--prev"
             to={`/levels/${this.props.logo.level}`}
-            innerRef={node => {
-              // `node` refers to the mounted DOM element
-              // or null when unmounted
-              if (node && !this.props.nextLogo) {
-                node.focus();
-              }
-            }}
           >
             <SVGBackArrow className="lv-modal__back-icon" height="16px"/>
             <span className="lv-modal__back-text">Back to logos</span>
@@ -395,7 +377,15 @@ const mapDispatchToProps = (dispatch: ThunkDispatch<{}, {}, any>) => ({
   validateLogo: (id: string, guess: string) => dispatch(validateLogo(id, guess)),
 });
 
-export default connect(
+const ConnectedLogoVerify = connect(
   mapStateToProps,
   mapDispatchToProps,
 )(LogoVerify);
+
+// Wrapper component to inject route params
+function LogoVerifyWrapper() {
+  const { id } = useParams<{ id: string }>();
+  return <ConnectedLogoVerify logoId={id || ''} />;
+}
+
+export default LogoVerifyWrapper;

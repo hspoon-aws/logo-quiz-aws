@@ -77,7 +77,7 @@ npm run destroy                # Destroy all stacks (careful!)
 - React Router 6.21 for routing
 - Views: Login, SignUp, LevelList, LogoList, LogoVerify, LogOut, Battle (BattleMenu, CreateRoom, JoinRoom, GameLobby, BattleGame, Scoreboard)
 - Firebase 10.7 for authentication
-- Socket.io-client 4.7 for real-time game features
+- **Dual-mode WebSocket**: SocketService (`shared/services/socket.service.ts`) uses Socket.io for local dev, native WebSocket for production
 - SCSS for styling
 
 ### Game Modes
@@ -98,6 +98,7 @@ npm run destroy                # Destroy all stacks (careful!)
   - Score animation (+/- points) on answers
   - Answer reveal to all players when someone solves
   - Wrong answer penalty (-100 points)
+  - Speed bonus: +100 base points + up to +50 bonus for fast answers
   - Space-insensitive answer validation
   - Final scoreboard with rankings
 

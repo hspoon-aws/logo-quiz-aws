@@ -63,10 +63,22 @@ Report bugs or feature requests by opening an [issue](https://github.com/hspoon-
 |-------|------------|
 | Frontend | React 18, TypeScript, Redux, Vite, SCSS |
 | Backend | NestJS 10, TypeScript, Passport JWT |
-| Real-time | Socket.io 4.7 (WebSocket) |
+| Real-time (Dev) | Socket.io 4.7 (WebSocket) |
+| Real-time (Prod) | API Gateway WebSocket + Lambda |
 | Database | DynamoDB (AWS SDK v3) |
 | Auth | Firebase Authentication |
 | Container | Docker/Finch |
+
+### WebSocket Dual-Mode Architecture
+
+The frontend `SocketService` (`apps/logo-quiz/src/shared/services/socket.service.ts`) supports two modes:
+
+| Mode | When | Connection | Backend |
+|------|------|------------|---------|
+| **Development** | `webSocketUrl` not set | Socket.io | NestJS GameGateway |
+| **Production** | `webSocketUrl` set | Native WebSocket | API Gateway + Lambda |
+
+This allows local development with Socket.io's rich features while production uses serverless WebSocket API for cost efficiency and scalability.
 
 ### Monorepo Structure
 
@@ -145,19 +157,19 @@ logo-quiz-aws/
 | `game:answer` | Submit answer guess |
 
 #### Server → Client
-| Event | Description |
-|-------|-------------|
-| `room:created` | Room created confirmation |
-| `room:joined` | Successfully joined room |
-| `room:state` | Room state update (players, ready status) |
-| `room:cancelled` | Room was cancelled |
-| `game:started` | Game has begun |
-| `game:logo` | New logo to guess |
-| `game:answer-result` | Answer validation result |
-| `game:score` | Leaderboard update |
-| `game:timer` | Time remaining |
-| `game:answer-revealed` | Someone solved - show answer |
-| `game:end` | Game finished with final scores |
+| Event | Description | Payload |
+|-------|-------------|---------|
+| `room:created` | Room created confirmation | `{ roomCode, state }` |
+| `room:joined` | Successfully joined room | `{ roomCode, state }` |
+| `room:state` | Room state update | `{ players, status, settings }` |
+| `room:error` | Error message | `{ message }` |
+| `room:cancelled` | Room was cancelled | `{ reason }` |
+| `game:started` | Game has begun | `{ totalLogos, timeLimit }` |
+| `game:logo` | New logo to guess | `{ logoId, obfuscatedImageUrl, letters, obfuscatedName, logoIndex, totalLogos }` |
+| `game:answer-result` | Answer validation result | `{ correct, points, totalScore, correctAnswer? }` |
+| `game:score-update` | Leaderboard update | `{ leaderboard: [{ displayName, score, correctAnswers }] }` |
+| `game:answer-revealed` | Someone solved - show answer | `{ answer, solvedBy, logoIndex }` |
+| `game:end` | Game finished with final scores | `{ rankings: [{ rank, displayName, score, correctAnswers }], totalLogos, gameTime }` |
 
 ### Scoring System
 

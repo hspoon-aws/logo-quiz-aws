@@ -2,7 +2,8 @@ import { Environment } from './environment.interface';
 
 export const environment: Environment = {
   production: true,
-  apiUrl: '/api',
+  apiUrl: 'https://hxhjbyvimw.us-east-1.awsapprunner.com/api',
+  webSocketUrl: 'wss://ehv67k1and.execute-api.us-east-1.amazonaws.com/prod',
   firebase: {
     apiKey: 'AIzaSyByGkdd0Nly2t4vZP0HJ9EuriXnqmWTeaA',
     authDomain: 'logo-quiz-prod.firebaseapp.com',

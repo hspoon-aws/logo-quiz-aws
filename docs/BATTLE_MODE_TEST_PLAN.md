@@ -2,9 +2,16 @@
 
 ## Prerequisites
 
-1. MongoDB running: `npm run start:db`
-2. API server running: `npm run start:api` (port 3333)
-3. Frontend running: `npm run start:frontend` (port 4200)
+### Local Development
+1. DynamoDB Local running: `npm run start:dynamodb`
+2. Database seeded: `npm run seed:dynamodb`
+3. API server running: `npm run start:api` (port 3333)
+4. Frontend running: `npm run start:frontend` (port 4200)
+
+### Production Testing
+1. Frontend: https://d1ph47sejrykr7.cloudfront.net
+2. REST API: https://hxhjbyvimw.us-east-1.awsapprunner.com/api
+3. WebSocket: wss://ehv67k1and.execute-api.us-east-1.amazonaws.com/prod
 
 ---
 
@@ -99,12 +106,39 @@
 
 ---
 
+## Production-Specific Tests
+
+| Test ID | Description | Expected Result |
+|---------|-------------|-----------------|
+| PROD-01 | WebSocket connects | Connection established to API Gateway |
+| PROD-02 | Client-side timer | Timer counts down locally (no server ticks) |
+| PROD-03 | Speed bonus | Correct answers give 100 + speed bonus |
+| PROD-04 | Exact letter count | Only answer letters shown (no extras) |
+| PROD-05 | Max players 100 | Can support up to 100 players |
+
+### WebSocket Connection Test (Node.js)
+```javascript
+const WebSocket = require('ws');
+const ws = new WebSocket('wss://ehv67k1and.execute-api.us-east-1.amazonaws.com/prod');
+ws.on('open', () => {
+  console.log('Connected');
+  ws.send(JSON.stringify({
+    action: 'message',
+    event: 'room:create',
+    data: { displayName: 'TestHost' }
+  }));
+});
+ws.on('message', (data) => console.log('Received:', data.toString()));
+```
+
+---
+
 ## Test Scripts (Playwright MCP)
 
 ### Script 1: Room Creation Flow
 
 ```
-1. Navigate to http://localhost:4200/battle
+1. Navigate to https://d1ph47sejrykr7.cloudfront.net/battle (or http://localhost:4200/battle for local)
 2. Verify "Create Room" button visible
 3. Click "Create Room"
 4. Verify URL is /battle/create

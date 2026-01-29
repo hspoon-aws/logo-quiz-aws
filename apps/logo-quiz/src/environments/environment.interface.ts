@@ -12,5 +12,6 @@ interface FirebaseConfig {
 export interface Environment {
   production: boolean;
   apiUrl: string;
+  webSocketUrl?: string; // API Gateway WebSocket URL (optional - falls back to Socket.io if not set)
   firebase: FirebaseConfig;
 }

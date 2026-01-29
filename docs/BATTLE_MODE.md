@@ -6,6 +6,8 @@ Battle Mode is a real-time multiplayer feature where players compete to guess ob
 
 ## Architecture
 
+### Local Development (Socket.io)
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                         Frontend (React)                         │
@@ -32,6 +34,43 @@ Battle Mode is a real-time multiplayer feature where players compete to guess ob
 │  - game:answer                                                   │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+### Production (AWS API Gateway WebSocket API)
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         Frontend (React)                         │
+├─────────────────────────────────────────────────────────────────┤
+│  Socket Service detects environment.webSocketUrl and uses       │
+│  native WebSocket instead of Socket.io                          │
+└───────────────────────────────┬─────────────────────────────────┘
+                                │ WebSocket (native)
+                                │ wss://xxx.execute-api.region.amazonaws.com/prod
+┌───────────────────────────────┴─────────────────────────────────┐
+│               AWS API Gateway (WebSocket API)                    │
+├─────────────────────────────────────────────────────────────────┤
+│  Routes:                                                         │
+│  - $connect    → Lambda handler                                  │
+│  - $disconnect → Lambda handler                                  │
+│  - $default    → Lambda handler (all game events)               │
+└───────────────────────────────┬─────────────────────────────────┘
+                                │
+┌───────────────────────────────┴─────────────────────────────────┐
+│                   Lambda Function                                │
+├─────────────────────────────────────────────────────────────────┤
+│  Single handler processes all events:                           │
+│  - room:create, room:join, room:leave, room:ready              │
+│  - game:start, game:answer                                      │
+│  - Uses @aws-sdk/client-apigatewaymanagementapi to send msgs   │
+└───────────────────────────────┬─────────────────────────────────┘
+                                │
+                           DynamoDB
+```
+
+**Key differences in production:**
+- Client-side timer (Lambda can't send periodic updates)
+- Single Lambda handles all WebSocket routes
+- Uses API Gateway Management API to send messages to connections
 
 ## Game Flow
 
@@ -110,52 +149,61 @@ Battle Mode is a real-time multiplayer feature where players compete to guess ob
 
 ## Data Models
 
-### GameRoom (MongoDB)
+### GameRoom (DynamoDB: LogoQuiz-GameRooms)
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `roomCode` | String (PK) | Unique 6-character room code |
+| `hostSocketId` | String | WebSocket connection ID of host |
+| `hostDisplayName` | String | Display name of host |
+| `players` | List | Array of player objects |
+| `playerSocketIds` | List | Array of player connection IDs |
+| `settings` | Map | Game configuration |
+| `status` | String | waiting / starting / in_progress / completed / cancelled |
+| `logoIds` | List | Selected logo IDs for the game |
+| `logos` | List | Full logo objects (cached for Lambda) |
+| `currentLogoIndex` | Number | Current logo being played |
+| `logoSentAt` | Number | Timestamp when current logo was sent (for speed bonus) |
+| `scores` | Map | Player scores by connection ID |
+| `createdAt` | String | ISO timestamp |
+
 ```typescript
+// Player object within players array
 {
-  roomCode: string,          // Unique 6-char code
-  host: ObjectId,            // Host user (optional)
-  hostSocketId: string,      // Host socket ID
-  hostDisplayName: string,
-  players: [{
-    user: ObjectId,          // User ID (optional)
-    displayName: string,
-    joinedAt: Date,
-    isReady: boolean,
-    socketId: string
-  }],
-  settings: {
-    timeLimit: number,       // 60-300 seconds
-    maxPlayers: number,      // 2-8
-    minPlayers: number,      // Default: 2
-    logoCount: number,       // 5-20
-    autoStart: boolean       // Auto-start when all ready
-  },
-  status: 'waiting' | 'starting' | 'in_progress' | 'completed' | 'cancelled',
-  logos: ObjectId[],         // Selected logos for game
-  currentLogoIndex: number,
-  gameStartedAt: Date,
-  gameEndedAt: Date
+  displayName: string,
+  isReady: boolean,
+  isHost: boolean
+}
+
+// Settings object
+{
+  timeLimit: number,       // 60-300 seconds
+  maxPlayers: number,      // 2-100 (default: 100)
+  minPlayers: number,      // Default: 2
+  logoCount: number        // 5-20 (default: 10)
 }
 ```
 
-### GameSession (MongoDB)
+### GameSession (DynamoDB: LogoQuiz-GameSessions)
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `roomCode` | String (PK) | Room code reference |
+| `socketId` | String (SK) | WebSocket connection ID |
+| `displayName` | String | Player display name |
+| `score` | Number | Current score |
+| `correctAnswers` | Number | Count of correct answers |
+| `finalRank` | Number | Final ranking (set at game end) |
+| `answers` | List | Array of answer objects |
+
 ```typescript
+// Answer object within answers array
 {
-  gameRoom: ObjectId,
-  user: ObjectId,            // Optional
-  displayName: string,
-  socketId: string,
-  score: number,
-  answers: [{
-    logo: ObjectId,
-    correct: boolean,
-    timeTaken: number,       // Milliseconds
-    points: number,
-    answeredAt: Date
-  }],
-  correctAnswers: number,
-  finalRank: number
+  logoId: string,
+  correct: boolean,
+  timeTaken: number,       // Milliseconds
+  points: number,
+  answeredAt: string       // ISO timestamp
 }
 ```
 
@@ -244,3 +292,35 @@ GameRoomState {
 3. No spectator mode
 4. Single game per room (no rematch in same room)
 5. All players see same logo simultaneously
+6. Production uses client-side timer (Lambda can't send periodic updates)
+
+## Production Deployment
+
+### Infrastructure (CDK)
+- WebSocket API Gateway with Lambda integration
+- Lambda function processes all game events
+- DynamoDB tables for state persistence
+
+### CDK Stack: `LogoQuizWebSocket`
+Location: `infra/lib/stacks/websocket-stack.ts`
+
+```bash
+# Deploy WebSocket stack
+cd infra
+npm run deploy:websocket
+```
+
+### Environment Configuration
+Frontend detects production mode via `environment.webSocketUrl`:
+- If set: Uses native WebSocket to API Gateway
+- If not set: Uses Socket.io to NestJS backend
+
+```typescript
+// apps/logo-quiz/src/environments/environment.prod.ts
+export const environment: Environment = {
+  production: true,
+  apiUrl: 'https://xxx.awsapprunner.com/api',
+  webSocketUrl: 'wss://xxx.execute-api.region.amazonaws.com/prod',
+  // ...
+};
+```

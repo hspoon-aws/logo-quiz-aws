@@ -2,12 +2,12 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "../../dist/apps/api",
-    "rootDir": "./src",
+    "rootDir": "../../",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "target": "ES2022",
     "types": ["node"]
   },
   "exclude": ["**/*.spec.ts"],
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts", "../../libs/models/src/**/*.ts"]
 }

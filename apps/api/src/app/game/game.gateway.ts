@@ -134,6 +134,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       );
 
       if (!room) {
+        // Emit error directly (acknowledgment may not work with polling)
+        client.emit('room:error', { message: 'Room not found or cannot join' });
         return {
           event: 'room:error',
           data: { message: 'Room not found or cannot join' },

@@ -163,11 +163,13 @@ logo-quiz-aws/
 
 | Action | Points |
 |--------|--------|
-| Correct answer | +100 to +10 (based on time) |
+| Correct answer | +100 base + up to +50 speed bonus |
 | Wrong answer | -100 |
 | Minimum score | 0 |
 
-Score calculation: `points = max(10, 100 - (timeTaken / totalTime) * 90)`
+Speed bonus calculation: `bonus = floor(50 * (1 - timeTaken / totalGameTime))`
+- Answer immediately: +150 points (100 + 50)
+- Answer at end: +100 points (100 + 0)
 
 ### Answer Validation
 
@@ -217,6 +219,144 @@ npm run update:icons           # Check and download if newer version available
 npm run update:icons:force     # Force re-download
 npm run refresh:icons          # Update icons AND reseed the database
 ```
+
+## Production Deployment
+
+The application is deployed on AWS with the following architecture:
+
+```
+CloudFront (CDN) ──────> S3 Bucket (React SPA)
+
+App Runner (API) ──────> DynamoDB (Users, Levels, Logos, UserState)
+
+WebSocket API Gateway ─> Lambda ─> DynamoDB (GameRooms, GameSessions)
+```
+
+### Live URLs
+
+| Service | URL |
+|---------|-----|
+| Frontend | https://d1ph47sejrykr7.cloudfront.net |
+| REST API | https://hxhjbyvimw.us-east-1.awsapprunner.com/api |
+| WebSocket | wss://ehv67k1and.execute-api.us-east-1.amazonaws.com/prod |
+
+### Deployment Commands
+
+```bash
+# Deploy infrastructure (first time)
+cd infra
+npm install
+npx cdk bootstrap
+npm run deploy
+
+# Deploy API changes
+./scripts/deploy-api.sh
+
+# Deploy frontend changes
+./scripts/deploy-frontend.sh
+
+# Seed production database
+./scripts/seed-production.sh
+```
+
+See `infra/README.md` for detailed deployment documentation.
+
+## AWS Well-Architected Review
+
+Assessment of Logo Quiz AWS against the [AWS Well-Architected Framework](https://aws.amazon.com/architecture/well-architected/).
+
+### Summary
+
+| Pillar | Status | Key Strengths | Areas for Improvement |
+|--------|--------|---------------|----------------------|
+| **Security** | ⚠️ Medium | Secrets Manager, IAM least-privilege, S3 OAI | Input validation, WebSocket auth, rate limiting |
+| **Reliability** | ⚠️ Medium | Health checks, DynamoDB PITR, TTL cleanup | Retry logic, enhanced health checks, multi-AZ |
+| **Performance** | ✅ Good | CloudFront CDN, DynamoDB GSIs, pay-per-request | Response caching, query optimization |
+| **Cost Optimization** | ✅ Good | Pay-per-request, minimal compute, TTL cleanup | Log retention policies, scale-to-zero |
+| **Operational Excellence** | ⚠️ Medium | CDK IaC, modular stacks, deployment scripts | CI/CD pipeline, monitoring, alerting |
+
+### Security Pillar
+
+**Strengths:**
+- AWS Secrets Manager for API secrets (APP_SALT, APP_SESSION_SECRET)
+- Granular IAM roles with least-privilege access for App Runner, Lambda, DynamoDB
+- S3 bucket with CloudFront Origin Access Identity (OAI)
+- JWT-based authentication with Passport.js
+- HMAC-SHA256 password hashing with salt
+
+**Recommendations:**
+- Add input validation (class-validator) for all API endpoints
+- Implement WebSocket authentication on $connect route
+- Add rate limiting on auth endpoints and WebSocket connections
+- Move Firebase config to environment variables or Secrets Manager
+- Add security headers (HSTS, CSP, X-Frame-Options)
+
+### Reliability Pillar
+
+**Strengths:**
+- App Runner health checks (`/api/health`, 10s interval)
+- DynamoDB Point-in-Time Recovery (PITR) enabled
+- TTL on GameRooms/GameSessions for automatic cleanup
+- Global exception filter for centralized error handling
+
+**Recommendations:**
+- Enhance health check to verify database connectivity
+- Implement retry logic with exponential backoff for DynamoDB operations
+- Enable PITR on all DynamoDB tables
+- Add CloudWatch Logs with retention policies
+- Consider multi-AZ deployment for production
+
+### Performance Pillar
+
+**Strengths:**
+- CloudFront CDN with CACHING_OPTIMIZED policy
+- Efficient DynamoDB schema with proper GSIs
+- Pay-per-request billing auto-scales with demand
+- Multi-stage Docker build with minimal production image
+
+**Recommendations:**
+- Add response caching (Redis/ElastiCache) for logos/levels
+- Optimize DynamoDB scans with GSI for connection lookups
+- Enable response compression (gzip/brotli)
+- Use projection expressions to return only needed fields
+
+### Cost Optimization Pillar
+
+**Strengths:**
+- DynamoDB on-demand billing (pay-per-request)
+- App Runner 0.25 vCPU / 0.5 GB (minimal tier)
+- CloudFront PriceClass 100 (US/Canada/Europe only)
+- ECR lifecycle rules (keeps only 5 images)
+- TTL cleanup prevents storage bloat
+
+**Recommendations:**
+- Set CloudWatch Logs retention (30-90 days)
+- Configure App Runner scale-to-zero for idle periods
+- Set up AWS Budgets alerts
+- Evaluate provisioned capacity if traffic becomes predictable
+
+### Operational Excellence Pillar
+
+**Strengths:**
+- AWS CDK for Infrastructure as Code
+- Modular stack design (Database, API, Frontend, WebSocket)
+- Deployment automation scripts
+- Winston structured logging framework
+
+**Recommendations:**
+- Implement CI/CD pipeline (GitHub Actions, CodePipeline)
+- Add CloudWatch dashboards and alarms
+- Enable AWS X-Ray for distributed tracing
+- Create runbook documentation for incident response
+- Add version endpoint for deployment tracking
+
+### Priority Actions
+
+1. **High**: Add input validation and WebSocket authentication
+2. **High**: Implement CI/CD pipeline for automated deployments
+3. **Medium**: Set up CloudWatch monitoring and alerting
+4. **Medium**: Enhance health checks with database connectivity verification
+5. **Low**: Add response caching for frequently accessed data
 
 ## Resources
 

@@ -6,6 +6,7 @@ import { LevelModule } from './level/level.module';
 import { LogoModule } from './logo/logo.module';
 import { UserModule } from './user/user.module';
 import { GameModule } from './game/game.module';
+import { HealthModule } from './health/health.module';
 import { LoggerInterceptor } from '../shared/interceptors/logger.interceptor';
 import { NotifierService } from '../shared/service/notifier.service';
 import { DatabaseModule } from './database/database.module';
@@ -13,6 +14,7 @@ import { DatabaseModule } from './database/database.module';
 @Module({
   imports: [
     DatabaseModule,
+    HealthModule,
     LevelModule,
     LogoModule,
     UserModule,

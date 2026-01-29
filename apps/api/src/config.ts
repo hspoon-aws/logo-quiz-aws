@@ -1,6 +1,8 @@
-import * as dotenv from 'dotenv';
-
-dotenv.config({ path: './apps/api/.env' });
+// Only load dotenv in development (it's a devDependency)
+if (process.env.NODE_ENV !== 'production') {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  require('dotenv').config({ path: './apps/api/.env' });
+}
 
 export type EnvironmentName = 'production' | 'staging' | 'development';
 

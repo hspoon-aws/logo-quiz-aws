@@ -41,6 +41,39 @@ import {
 } from '@logo-quiz/models';
 import { AppState } from '../index';
 
+// Client-side timer since Lambda can't send periodic updates
+let clientTimerInterval: ReturnType<typeof setInterval> | null = null;
+
+function clearClientTimer() {
+  if (clientTimerInterval) {
+    clearInterval(clientTimerInterval);
+    clientTimerInterval = null;
+  }
+}
+
+function startClientTimer(dispatch: any, getState: () => AppState) {
+  clearClientTimer();
+
+  clientTimerInterval = setInterval(() => {
+    const state = getState();
+    const newTime = state.gameRoom.timeRemaining - 1;
+
+    if (newTime <= 0) {
+      clearClientTimer();
+      dispatch(gameTimerUpdate(0));
+
+      // Only host sends timeout to prevent duplicate game ends
+      if (state.gameRoom.isHost) {
+        socketService.gameTimeout().catch(err => {
+          console.error('Failed to send game timeout:', err);
+        });
+      }
+    } else {
+      dispatch(gameTimerUpdate(newTime));
+    }
+  }, 1000);
+}
+
 // Action creators
 export function gameRoomConnect(): GameRoomActionTypes {
   return { type: GAME_ROOM_CONNECT };
@@ -124,7 +157,7 @@ export function gameAnswerRevealed(answer: string, solvedBy: string): GameRoomAc
 
 // Thunk actions
 export function connectToGame() {
-  return async function (dispatch: Dispatch) {
+  return async function (dispatch: Dispatch, getState: () => AppState) {
     dispatch(gameRoomConnect());
     try {
       await socketService.connect();
@@ -140,6 +173,10 @@ export function connectToGame() {
         dispatch(gameRoomJoined(roomCode, state, ''));
       });
 
+      socketService.onRoomError(({ message }) => {
+        dispatch(gameRoomError(message));
+      });
+
       socketService.onRoomState((state) => {
         dispatch(gameRoomStateUpdate(state));
       });
@@ -150,6 +187,8 @@ export function connectToGame() {
 
       socketService.onGameStarted(({ totalLogos, timeLimit }) => {
         dispatch(gameStarted(totalLogos, timeLimit));
+        // Start client-side timer countdown
+        startClientTimer(dispatch, getState);
       });
 
       socketService.onGameLogo((logo) => {
@@ -169,6 +208,7 @@ export function connectToGame() {
       });
 
       socketService.onGameEnd((scoreboard) => {
+        clearClientTimer();
         dispatch(gameEnd(scoreboard));
       });
 
@@ -183,6 +223,7 @@ export function connectToGame() {
 
 export function disconnectFromGame() {
   return function (dispatch: Dispatch) {
+    clearClientTimer();
     socketService.removeAllListeners();
     socketService.disconnect();
     dispatch(gameRoomDisconnected());
@@ -209,6 +250,11 @@ export function joinRoom(roomCode: string, displayName: string) {
     dispatch({ type: GAME_ROOM_JOIN, roomCode, displayName });
     try {
       const result = await socketService.joinRoom({ roomCode, displayName });
+      // In production (native WebSocket), result is undefined - response comes via event listener
+      if (!result) {
+        // Response will come via onRoomJoined or onRoomError event listeners
+        return;
+      }
       if ('message' in result) {
         dispatch(gameRoomError(result.message));
       } else {

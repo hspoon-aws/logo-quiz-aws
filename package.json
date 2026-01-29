@@ -16,6 +16,12 @@
     "update:icons": "tsx scripts/update-aws-icons.ts",
     "update:icons:force": "tsx scripts/update-aws-icons.ts --force",
     "refresh:icons": "npm run update:icons && npm run seed:dynamodb",
+    "seed:production": "./scripts/seed-production.sh",
+    "deploy:api": "./scripts/deploy-api.sh",
+    "deploy:frontend": "./scripts/deploy-frontend.sh",
+    "cdk": "cd infra && npm run cdk",
+    "cdk:deploy": "cd infra && npm run deploy",
+    "cdk:destroy": "cd infra && npm run destroy",
     "test": "jest",
     "lint": "eslint apps libs --ext .ts,.tsx",
     "format": "prettier --write \"apps/**/*.{ts,tsx}\" \"libs/**/*.{ts,tsx}\""

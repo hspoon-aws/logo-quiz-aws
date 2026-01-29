@@ -41,6 +41,28 @@ docker compose up api          # API service
 docker compose up web          # Frontend service
 ```
 
+### AWS Infrastructure (CDK)
+```bash
+cd infra
+npm install                    # Install CDK dependencies
+npx cdk bootstrap              # First-time CDK setup
+npm run deploy                 # Deploy all stacks
+npm run deploy:db              # Deploy database stack only
+npm run deploy:api             # Deploy API stack only
+npm run deploy:frontend        # Deploy frontend stack only
+npm run deploy:websocket       # Deploy WebSocket API Gateway stack
+npm run synth                  # Synthesize CloudFormation templates
+npm run diff                   # Compare deployed vs local changes
+npm run destroy                # Destroy all stacks (careful!)
+```
+
+### Production Deployment
+```bash
+../scripts/deploy-api.sh       # Build and push API to ECR, trigger App Runner
+../scripts/deploy-frontend.sh  # Build and sync frontend to S3, invalidate CloudFront
+../scripts/seed-production.sh  # Seed production DynamoDB tables
+```
+
 ## Architecture
 
 ### Monorepo Structure
@@ -80,12 +102,32 @@ docker compose up web          # Frontend service
   - Final scoreboard with rankings
 
 ### Backend (apps/api)
-- NestJS 10.3 modules: AuthModule, LevelModule, LogoModule, UserModule, GameModule
+- NestJS 10.3 modules: AuthModule, LevelModule, LogoModule, UserModule, GameModule, HealthModule
 - Passport 0.7 with JWT/Bearer strategies for route protection
 - DynamoDB via AWS SDK v3 (@aws-sdk/client-dynamodb, @aws-sdk/lib-dynamodb)
 - DynamoDBService (`apps/api/src/shared/service/dynamodb.service.ts`) - centralized database client
-- Socket.io 4.7 for WebSocket support (game rooms, real-time battles)
+- Socket.io 4.7 for WebSocket support (local development only)
 - Winston 3.11 for logging with daily rotate file support
+
+### Production Architecture
+
+```
+CloudFront Distribution ─────────> S3 Bucket (React SPA)
+        │
+        └─────────────────────────> App Runner (NestJS REST API)
+                                          │
+                                     DynamoDB Tables
+
+WebSocket API Gateway ──────────> Lambda (Battle Mode game logic)
+                                          │
+                                     DynamoDB Tables
+```
+
+**Key difference**: Production uses AWS API Gateway WebSocket API + Lambda for Battle Mode instead of Socket.io. This enables serverless WebSocket handling without persistent connections to App Runner.
+
+- **REST API**: App Runner serves NestJS for auth, levels, logos, user state
+- **WebSocket API**: API Gateway + Lambda handles real-time Battle Mode
+- **Database**: DynamoDB tables shared between REST API and Lambda
 
 ### Path Aliases (tsconfig.json)
 - `@logo-quiz/models` - Shared models library
@@ -135,6 +177,14 @@ The script:
 ### Scripts
 - `scripts/update-aws-icons.ts` - Node.js script for programmatic use
 - `scripts/update-aws-icons.sh` - Bash script for CI/CD pipelines
+
+## Deployed URLs (Production)
+
+| Service | URL |
+|---------|-----|
+| Frontend | https://d1ph47sejrykr7.cloudfront.net |
+| REST API | https://hxhjbyvimw.us-east-1.awsapprunner.com/api |
+| WebSocket | wss://ehv67k1and.execute-api.us-east-1.amazonaws.com/prod |
 
 ## Test Credentials
 

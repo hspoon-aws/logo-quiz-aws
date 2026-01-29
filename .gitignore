@@ -7,6 +7,7 @@
 
 # dependencies
 /node_modules
+*/node_modules
 
 # IDEs and editors
 /.idea
@@ -44,3 +45,10 @@ Thumbs.db
 .vercel
 .env
 /logs/
+
+#images
+*.png
+*.svg
+
+/cdk.out
+*/cdk.out

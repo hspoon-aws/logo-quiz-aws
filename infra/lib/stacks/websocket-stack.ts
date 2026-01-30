@@ -218,6 +218,16 @@ export class WebSocketStack extends cdk.Stack {
           return code;
         };
 
+        // Fisher-Yates shuffle for unbiased randomization
+        const shuffle = (array) => {
+          const result = [...array];
+          for (let i = result.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [result[i], result[j]] = [result[j], result[i]];
+          }
+          return result;
+        };
+
         const getRoomState = (room) => ({
           roomCode: room.roomCode,
           hostDisplayName: room.hostDisplayName,
@@ -411,7 +421,7 @@ export class WebSocketStack extends cdk.Stack {
                 TableName: process.env.TABLE_LOGOS,
               }));
               const allLogos = logosResult.Items || [];
-              const shuffled = allLogos.sort(() => Math.random() - 0.5);
+              const shuffled = shuffle(allLogos);
               const selectedLogos = shuffled.slice(0, room.settings.logoCount);
               const logoIds = selectedLogos.map(l => l.logoId);
 
@@ -456,7 +466,7 @@ export class WebSocketStack extends cdk.Stack {
               const obfuscatedName = firstLogo.name.toLowerCase().replace(/[a-z]/gi, '*').replace(/ /g, '_');
               const answerLetters = firstLogo.name.toUpperCase().replace(/[^A-Z]/g, '');
               // Shuffle only the answer letters (no extra letters)
-              const letters = answerLetters.split('').sort(() => Math.random() - 0.5).join('');
+              const letters = shuffle(answerLetters.split('')).join('');
 
               // Store logo sent timestamp for speed bonus calculation
               await ddb.send(new UpdateCommand({
@@ -565,7 +575,8 @@ export class WebSocketStack extends cdk.Stack {
               if (isCorrect) {
                 const solverIsHost = connectionId === room.hostSocketId;
                 const solverIdx = room.playerSocketIds?.indexOf(connectionId);
-                const solverName = solverIsHost ? room.hostDisplayName : room.players[solverIdx]?.displayName || 'Someone';
+                // players[0] is host, non-host players are at players[solverIdx + 1]
+                const solverName = solverIsHost ? room.hostDisplayName : room.players[solverIdx + 1]?.displayName || 'Someone';
 
                 await broadcastToRoom(event, room, {
                   action: 'game:answer-revealed',
@@ -581,7 +592,7 @@ export class WebSocketStack extends cdk.Stack {
                   const nextObfuscatedName = nextLogo.name.toLowerCase().replace(/[a-z]/gi, '*').replace(/ /g, '_');
                   const nextAnswerLetters = nextLogo.name.toUpperCase().replace(/[^A-Z]/g, '');
                   // Shuffle only the answer letters (no extra letters)
-                  const nextLetters = nextAnswerLetters.split('').sort(() => Math.random() - 0.5).join('');
+                  const nextLetters = shuffle(nextAnswerLetters.split('')).join('');
 
                   // Small delay before next logo
                   await new Promise(r => setTimeout(r, 2000));
@@ -660,7 +671,14 @@ export class WebSocketStack extends cdk.Stack {
               }));
 
               const leaderboard = (sessionsResult.Items || [])
-                .map(s => ({ displayName: s.displayName, score: s.score || 0, correctAnswers: s.correctAnswers || 0 }))
+                .filter(s => s.socketId !== '__CONNECTIONS__')
+                .map(s => {
+                  const isHost = s.socketId === room.hostSocketId;
+                  const playerIdx = room.playerSocketIds?.indexOf(s.socketId);
+                  // players[0] is host, non-host players are at players[playerIdx + 1]
+                  const displayName = isHost ? room.hostDisplayName : room.players[playerIdx + 1]?.displayName || 'Unknown';
+                  return { displayName, score: s.score || 0, correctAnswers: s.correctAnswers || 0 };
+                })
                 .sort((a, b) => b.score - a.score);
 
               // Convert leaderboard to rankings with rank field

@@ -2,7 +2,7 @@
 
 *A developer's experience using agentic coding to add real-time multiplayer and migrate to serverless AWS infrastructure*
 
-*By [Your Name], [Title] | Published: [Date]*
+*By Shing Poon, Sr. TAM | Published: 30 Jan 2026*
 
 > *The views expressed in this post are my own. Cost estimates are based on my specific usage patterns and may vary.*
 

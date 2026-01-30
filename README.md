@@ -1,4 +1,4 @@
-# Logo Quiz AWS Edition
+# Logo Quiz AWS Edition - Agentic coding dev branch ([Blog](blog.md))
 
 An AWS services version of Logo Quiz. Test your knowledge of AWS service logos!
 

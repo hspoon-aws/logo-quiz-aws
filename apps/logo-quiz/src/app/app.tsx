@@ -23,7 +23,8 @@ export class App extends Component {
             Battle Mode
           </Link>
           
-          <div className="main__footer">This project is forked from <br/> <a href="https://github.com/logo-quiz/logo-quiz">Logo-quiz Github</a></div>
+          <div className="main__footer"><a href="https://github.com/hspoon-aws/logo-quiz-aws">Github Repo</a> <br/>
+          This project is forked from <br/> <a href="https://github.com/logo-quiz/logo-quiz">Logo-quiz Github</a></div>
         </div>
         
       </div>
